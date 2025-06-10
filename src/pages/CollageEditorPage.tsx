@@ -9,7 +9,7 @@ import Layout from '../components/layout/Layout';
 import SceneSettings from '../components/collage/SceneSettings';
 import CollageScene from '../components/three/CollageScene';
 import PhotoUploader from '../components/collage/PhotoUploader';
-import CollagePhotos from '../components/collage/CollagePhotos';
+import CollagePhotos from '../components/collage/CollagePhotos'; // FIXED: This is now correct as default import
 
 type Tab = 'settings' | 'photos';
 
@@ -64,60 +64,44 @@ const CollageEditorPage: React.FC = () => {
   // DEBUG: Log photos changes in editor
   useEffect(() => {
     console.log('🎨 EDITOR: Photos array changed!');
-    console.log('🎨 Editor photo count:', safePhotos.length);
-    console.log('🎨 Editor photo IDs:', safePhotos.map(p => p.id.slice(-4)));
+    console.log('🎨 Photo count:', safePhotos.length);
+    console.log('🎨 Photo IDs:', safePhotos.map(p => `${p.id.slice(-4)}(${new Date(p.created_at).toLocaleTimeString()})`));
   }, [safePhotos]);
 
-  // DEBUG: Log realtime connection status
-  useEffect(() => {
-    console.log('🎨 EDITOR: Realtime connected:', isRealtimeConnected);
-  }, [isRealtimeConnected]);
-
-  // Fetch collage by ID - this will automatically setup realtime subscription
+  // Load collage data
   useEffect(() => {
     if (id) {
-      console.log('🎨 EDITOR: Fetching collage by ID:', id);
+      console.log('🎨 EDITOR: Loading collage:', id);
       fetchCollageById(id);
     }
-    
-    // Cleanup subscription when component unmounts
+
     return () => {
-      console.log('🎨 EDITOR: Cleaning up realtime subscription on unmount');
+      console.log('🎨 EDITOR: Cleaning up subscription');
       cleanupRealtimeSubscription();
     };
   }, [id, fetchCollageById, cleanupRealtimeSubscription]);
 
-  // Update scene store when collage settings change
-  useEffect(() => {
-    if (currentCollage?.settings) {
-      console.log('🎨 EDITOR: Updating scene store with collage settings');
-      updateSettings(currentCollage.settings, false);
-    }
-  }, [currentCollage?.settings, updateSettings]);
-
-  // Auto-save settings changes with debouncing
-  const handleSettingsChange = async (newSettings: any) => {
-    if (!currentCollage) return;
-
-    // Update local scene store immediately for responsive UI
-    updateSettings(newSettings, false);
-
+  // Auto-save settings with debounce
+  const handleSettingsChange = (newSettings: Partial<any>) => {
+    updateSettings(newSettings);
+    
     // Clear existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-
+    
+    // Set new timeout for auto-save
     setSaving(true);
-
-    // Debounce the save operation
     saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        await updateCollageSettings(currentCollage.id, newSettings);
-        console.log('✅ Settings auto-saved successfully');
-      } catch (error) {
-        console.error('❌ Failed to save settings:', error);
-      } finally {
-        setSaving(false);
+      if (currentCollage?.id) {
+        try {
+          await updateCollageSettings(currentCollage.id, newSettings);
+          console.log('✅ Settings auto-saved successfully');
+        } catch (error) {
+          console.error('❌ Failed to save settings:', error);
+        } finally {
+          setSaving(false);
+        }
       }
     }, 1000); // 1 second debounce
   };
@@ -162,32 +146,42 @@ const CollageEditorPage: React.FC = () => {
       spotlightCount: 4,
       spotlightHeight: 30,
       spotlightDistance: 40,
-      spotlightAngle: Math.PI / 4,
-      spotlightWidth: 0.6,
-      spotlightPenumbra: 0.4,
-      ambientLightIntensity: 0.8,
-      spotlightIntensity: 150.0,
+      spotlightAngle: Math.PI / 6,
+      spotlightIntensity: 2,
       spotlightColor: '#ffffff',
+      ambientLightIntensity: 0.4,
+      ambientLightColor: '#404040',
       floorEnabled: true,
-      floorColor: '#1A1A1A',
-      floorOpacity: 0.8,
       floorSize: 200,
-      floorReflectivity: 0.8,
-      floorMetalness: 0.7,
-      floorRoughness: 0.2,
-      gridEnabled: true,
-      gridColor: '#444444',
-      gridSize: 200,
-      gridDivisions: 30,
-      gridOpacity: 1.0,
+      floorColor: '#1A1A1A',
+      floorOpacity: 1,
+      floorMetalness: 0.5,
+      floorRoughness: 0.5,
+      gridEnabled: false,
+      gridSize: 100,
+      gridDivisions: 20,
+      gridColor: '#404040',
+      gridOpacity: 0.5,
       photoSize: 4.0,
-      photoRotation: true,
-      photoSpacing: 0,
-      wallHeight: 0,
-      gridAspectRatio: 1.77778,
       photoBrightness: 1.0,
+      photoSpacing: 1.2,
+      photoRotation: 0,
+      photoTilt: 0,
+      photoDepth: 0.1,
+      shadowsEnabled: true,
+      shadowQuality: 'medium' as const,
+      fogEnabled: false,
+      fogColor: '#000000',
+      fogNear: 50,
+      fogFar: 200,
+      postProcessingEnabled: false,
+      bloomEnabled: false,
+      bloomStrength: 0.5,
+      bloomRadius: 0.4,
+      bloomThreshold: 0.9,
     };
     
+    updateSettings(defaultSettings);
     handleSettingsChange(defaultSettings);
   };
 
@@ -196,8 +190,8 @@ const CollageEditorPage: React.FC = () => {
       <Layout>
         <div className="min-h-[calc(100vh-160px)] flex items-center justify-center">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-            <p className="mt-2 text-gray-400">Loading collage...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-gray-600">Loading collage...</p>
           </div>
         </div>
       </Layout>
@@ -207,20 +201,18 @@ const CollageEditorPage: React.FC = () => {
   if (error || !currentCollage) {
     return (
       <Layout>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-white mb-4">Collage Not Found</h2>
-            <p className="text-gray-400 mb-6">
-              The collage you're looking for doesn't exist or might have been removed.
-            </p>
-            <Link 
-              to="/dashboard" 
-              className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Link>
-          </div>
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Collage Not Found</h2>
+          <p className="text-gray-600 mb-6">
+            The collage you're looking for doesn't exist or you don't have permission to edit it.
+          </p>
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Link>
         </div>
       </Layout>
     );
@@ -228,57 +220,88 @@ const CollageEditorPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-[1920px] mx-auto h-[calc(100vh-80px)] flex gap-4 p-4">
-        {/* LEFT SIDEBAR - Maximized Settings Panel */}
-        <div className="w-96 flex-shrink-0">
-          <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg h-full flex flex-col">
-            {/* Compact Header */}
-            <div className="p-4 border-b border-gray-700 bg-gray-800/50">
-              <div className="flex items-center justify-between mb-3">
+      <div className="min-h-screen bg-black">
+        {/* Header */}
+        <div className="bg-gray-900 border-b border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center space-x-4">
                 <Link 
                   to="/dashboard" 
                   className="text-gray-400 hover:text-white transition-colors"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-6 h-6" />
                 </Link>
-                <div className="flex items-center space-x-3">
-                  <div className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                  <span className="text-xs text-gray-400 font-mono">
-                    {currentCollage.code}
-                  </span>
-                  <span className="text-xs text-gray-500">•</span>
-                  <span className="text-xs text-gray-400">{safePhotos.length} photos</span>
+                <div>
+                  <h1 className="text-xl font-bold text-white">{currentCollage.name}</h1>
+                  <div className="flex items-center space-x-2 text-gray-400 text-sm">
+                    <span>Code: {currentCollage.code}</span>
+                    <span>•</span>
+                    <span>{safePhotos.length} photos</span>
+                    <span>•</span>
+                    <div className="flex items-center space-x-1">
+                      <div className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                      <span>{isRealtimeConnected ? 'Live' : 'Polling'}</span>
+                    </div>
+                    {saving && (
+                      <>
+                        <span>•</span>
+                        <span className="text-blue-400">Saving...</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
               
-              <div className="text-center">
-                <h1 className="text-lg font-bold text-white truncate">{currentCollage.name}</h1>
-                {saving && (
-                  <div className="mt-1 text-xs text-purple-400 flex items-center justify-center">
-                    <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Saving...
-                  </div>
-                )}
+              <div className="flex items-center space-x-4">
+                <Link
+                  to={`/collage/${currentCollage.code}`}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition-colors"
+                >
+                  View Live
+                </Link>
+                <Link
+                  to={`/collage/${currentCollage.id}/moderation`}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition-colors flex items-center space-x-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Moderate</span>
+                </Link>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Minimal Tab Navigation */}
-            <div className="px-4 py-3 border-b border-gray-700/50">
-              <div className="flex space-x-1 bg-gray-800/50 rounded-md p-1">
+        {/* Main Content Layout */}
+        <div className="flex h-[calc(100vh-64px)]">
+          {/* LEFT SIDE - Compact Settings Panel */}
+          <div className="w-80 bg-gray-900/95 backdrop-blur border-r border-gray-700/50 flex flex-col">
+            {/* Compact Header */}
+            <div className="p-4 border-b border-gray-700/50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">Controls</h2>
+                <div className="flex items-center space-x-1 text-xs">
+                  <div className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                  <span className="text-gray-400">{isRealtimeConnected ? 'Live' : 'Polling'}</span>
+                </div>
+              </div>
+              
+              {/* Compact Tab Buttons */}
+              <div className="flex mt-3 space-x-1">
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className={`flex-1 flex items-center justify-center px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors flex items-center justify-center space-x-1 ${
                     activeTab === 'settings'
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
                   }`}
                 >
-                  <Settings className="w-3 h-3 mr-1.5" />
-                  Scene
+                  <Settings className="w-3 h-3" />
+                  <span>Settings</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('photos')}
-                  className={`flex-1 flex items-center justify-center px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors flex items-center justify-center space-x-1 ${
                     activeTab === 'photos'
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
@@ -296,13 +319,12 @@ const CollageEditorPage: React.FC = () => {
                 <div className="p-4">
                   <SceneSettings
                     settings={settings}
-                    onSettingsChange={handleSettingsChange}
+                    onChange={handleSettingsChange}
                     onReset={handleResetSettings}
                   />
                 </div>
               ) : (
                 <div className="p-4 space-y-4">
-                  <PhotoUploader />
                   <CollagePhotos 
                     collageId={currentCollage.id}
                     onManualRefresh={handleManualRefresh}

@@ -799,20 +799,23 @@ const SceneSettings: React.FC<{
 
           <div>
             <label className="block text-sm text-gray-300 mb-2">
-              Spotlight Tilt
-              <span className="ml-2 text-xs text-gray-400">{settings.spotlightAngle.toFixed(1)}</span>
+              Spotlight Tilt/Angle
+              <span className="ml-2 text-xs text-gray-400">{settings.spotlightAngle.toFixed(2)}</span>
             </label>
             <input
               type="range"
-              min="-1.5"
+              min="0.1"
               max="1.5"
-              step="0.1"
+              step="0.05"
               value={settings.spotlightAngle}
               onChange={(e) => onSettingsChange({ 
                 spotlightAngle: parseFloat(e.target.value) 
               }, true)}
               className="w-full bg-gray-800"
             />
+            <p className="mt-1 text-xs text-gray-400">
+              Controls the beam spread angle (0.1 = narrow beam, 1.5 = wide beam)
+            </p>
           </div>
 
           <div>

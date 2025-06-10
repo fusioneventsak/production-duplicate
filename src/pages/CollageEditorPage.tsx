@@ -1,4 +1,4 @@
-// src/pages/CollageEditorPage.tsx - WITH REAL-TIME UPDATES
+// src/pages/CollageEditorPage.tsx - UPDATED: Left-side settings panel with improved styling
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Settings, Image, Shield } from 'lucide-react';
@@ -64,9 +64,9 @@ const CollageEditorPage: React.FC = () => {
   // DEBUG: Log photos changes in editor
   useEffect(() => {
     console.log('🎨 EDITOR: Photos array changed!');
-    console.log('🎨 Editor photo count:', photos.length);
-    console.log('🎨 Editor photo IDs:', photos.map(p => p.id.slice(-4)));
-  }, [photos]);
+    console.log('🎨 Editor photo count:', safePhotos.length);
+    console.log('🎨 Editor photo IDs:', safePhotos.map(p => p.id.slice(-4)));
+  }, [safePhotos]);
 
   // DEBUG: Log realtime connection status
   useEffect(() => {
@@ -139,6 +139,58 @@ const CollageEditorPage: React.FC = () => {
     }
   };
 
+  // Reset settings to defaults
+  const handleResetSettings = () => {
+    if (!currentCollage) return;
+    
+    const defaultSettings = {
+      animationPattern: 'grid' as const,
+      animationSpeed: 50,
+      animationEnabled: true,
+      photoCount: 50,
+      backgroundColor: '#000000',
+      backgroundGradient: false,
+      backgroundGradientStart: '#000000',
+      backgroundGradientEnd: '#1a1a1a',
+      backgroundGradientAngle: 180,
+      emptySlotColor: '#1A1A1A',
+      cameraDistance: 25,
+      cameraRotationEnabled: true,
+      cameraRotationSpeed: 0.2,
+      cameraHeight: 10,
+      cameraEnabled: true,
+      spotlightCount: 4,
+      spotlightHeight: 30,
+      spotlightDistance: 40,
+      spotlightAngle: Math.PI / 4,
+      spotlightWidth: 0.6,
+      spotlightPenumbra: 0.4,
+      ambientLightIntensity: 0.8,
+      spotlightIntensity: 150.0,
+      spotlightColor: '#ffffff',
+      floorEnabled: true,
+      floorColor: '#1A1A1A',
+      floorOpacity: 0.8,
+      floorSize: 200,
+      floorReflectivity: 0.8,
+      floorMetalness: 0.7,
+      floorRoughness: 0.2,
+      gridEnabled: true,
+      gridColor: '#444444',
+      gridSize: 200,
+      gridDivisions: 30,
+      gridOpacity: 1.0,
+      photoSize: 4.0,
+      photoRotation: true,
+      photoSpacing: 0,
+      wallHeight: 0,
+      gridAspectRatio: 1.77778,
+      photoBrightness: 1.0,
+    };
+    
+    handleSettingsChange(defaultSettings);
+  };
+
   if (loading && !currentCollage) {
     return (
       <Layout>
@@ -176,193 +228,127 @@ const CollageEditorPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-[1920px] mx-auto h-[calc(100vh-80px)] flex">
-        {/* Main 3D Scene */}
-        <div className="flex-1 relative">
-          <ErrorBoundary 
-            FallbackComponent={SceneErrorFallback}
-            resetKeys={[currentCollage.id, settings, photos.length]}
-          >
-            <CollageScene 
-              photos={safePhotos}
-              settings={settings}
-              onSettingsChange={handleSettingsChange}
-            />
-          </ErrorBoundary>
-
-          {/* Floating Header */}
-          <div className="absolute top-4 left-4 right-4 z-10">
-            <div className="bg-black/80 backdrop-blur-sm rounded-lg border border-gray-700 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Link 
-                    to="/dashboard" 
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </Link>
-                  <div>
-                    <h1 className="text-xl font-bold text-white">{currentCollage.name}</h1>
-                    <div className="flex items-center space-x-2 text-gray-400 text-sm">
-                      <span>Code: {currentCollage.code}</span>
-                      <span>•</span>
-                      <span>{safePhotos.length} photos</span>
-                      <span>•</span>
-                      <div className="flex items-center space-x-1">
-                        <div className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                        <span>{isRealtimeConnected ? 'Live' : 'Polling'}</span>
-                      </div>
-                      {saving && (
-                        <>
-                          <span>•</span>
-                          <span className="text-yellow-400">Saving...</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
+      <div className="max-w-[1920px] mx-auto h-[calc(100vh-80px)] flex gap-6 p-6">
+        {/* LEFT SIDEBAR - Settings Panel */}
+        <div className="w-80 flex-shrink-0">
+          <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-xl h-full flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <Link 
+                  to="/dashboard" 
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </Link>
                 <div className="flex items-center space-x-2">
-                  {!isRealtimeConnected && (
-                    <button
-                      onClick={handleManualRefresh}
-                      className="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors text-sm"
-                    >
-                      Refresh
-                    </button>
-                  )}
-                  
-                  <Link
-                    to={`/collage/${currentCollage.code}`}
-                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors text-sm"
-                  >
-                    View Live
-                  </Link>
-                  
-                  <Link
-                    to={`/collage/${currentCollage.id}/moderation`}
-                    className="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors text-sm flex items-center space-x-1"
-                  >
-                    <Shield className="w-4 h-4" />
-                    <span>Moderate</span>
-                  </Link>
-                  
-                  <Link
-                    to={`/collage/${currentCollage.code}/photobooth`}
-                    className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors text-sm"
-                  >
-                    📸 Photobooth
-                  </Link>
+                  <div className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                  <span className="text-xs text-gray-400">
+                    {isRealtimeConnected ? 'Live' : 'Reconnecting...'}
+                  </span>
                 </div>
+              </div>
+              
+              <div>
+                <h1 className="text-xl font-bold text-white mb-2">{currentCollage.name}</h1>
+                <div className="flex items-center space-x-2 text-gray-400 text-sm">
+                  <span>Code: <span className="text-purple-400 font-mono">{currentCollage.code}</span></span>
+                  <span>•</span>
+                  <span>{safePhotos.length} photos</span>
+                </div>
+              </div>
+              
+              {saving && (
+                <div className="mt-2 text-xs text-purple-400 flex items-center">
+                  <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Saving changes...
+                </div>
+              )}
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="px-6 py-4 border-b border-gray-700">
+              <div className="flex space-x-1 bg-gray-800/50 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`flex-1 flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'settings'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Scene
+                </button>
+                <button
+                  onClick={() => setActiveTab('photos')}
+                  className={`flex-1 flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'photos'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  <Image className="w-4 h-4 mr-2" />
+                  Photos
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto">
+              {activeTab === 'settings' ? (
+                <div className="p-6">
+                  <SceneSettings
+                    settings={settings}
+                    onSettingsChange={handleSettingsChange}
+                    onReset={handleResetSettings}
+                  />
+                </div>
+              ) : (
+                <div className="p-6 space-y-6">
+                  <PhotoUploader />
+                  <CollagePhotos 
+                    collageId={currentCollage.id}
+                    onManualRefresh={handleManualRefresh}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-6 border-t border-gray-700">
+              <div className="flex space-x-3">
+                <Link
+                  to={`/collage/${currentCollage.code}`}
+                  className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-center rounded-lg transition-colors text-sm font-medium"
+                >
+                  View Live
+                </Link>
+                <Link
+                  to={`/collage/${currentCollage.code}/moderation`}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-center rounded-lg transition-colors text-sm font-medium"
+                >
+                  <Shield className="w-4 h-4 inline mr-1" />
+                  Moderate
+                </Link>
               </div>
             </div>
           </div>
-
-          {/* DEBUG INFO - Floating bottom-left */}
-          <div className="absolute bottom-4 left-4 bg-red-900/80 text-white p-3 rounded-lg text-xs max-w-sm z-10">
-            <h3 className="font-bold mb-1">EDITOR DEBUG:</h3>
-            <p>Photos: {safePhotos.length}</p>
-            <p>Realtime: {isRealtimeConnected ? '✅ Connected' : '⚠️ Polling'}</p>
-            <p>IDs: {safePhotos.map(p => p.id.slice(-4)).join(', ')}</p>
-            <button 
-              onClick={() => console.log('🎨 EDITOR PHOTOS:', photos)}
-              className="bg-red-700 px-2 py-1 mt-1 rounded text-xs"
-            >
-              Log Photos
-            </button>
-          </div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col">
-          {/* Tab Navigation */}
-          <div className="flex border-b border-gray-700">
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
-                activeTab === 'settings'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
-              }`}
+        {/* RIGHT SIDE - Main 3D Scene */}
+        <div className="flex-1 relative">
+          <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-xl h-full overflow-hidden">
+            <ErrorBoundary 
+              FallbackComponent={SceneErrorFallback}
+              resetKeys={[currentCollage.id, settings, safePhotos.length]}
             >
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('photos')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
-                activeTab === 'photos'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
-              }`}
-            >
-              <Image className="w-4 h-4" />
-              <span>Photos ({safePhotos.length})</span>
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'settings' ? (
-              <div className="h-full overflow-y-auto">
-                <SceneSettings
-                  settings={settings}
-                  onSettingsChange={handleSettingsChange}
-                />
-              </div>
-            ) : (
-              <div className="h-full flex flex-col">
-                {/* Photo Uploader */}
-                <div className="p-4 border-b border-gray-700">
-                  <PhotoUploader 
-                    collageId={currentCollage.id}
-                    onUploadComplete={() => {
-                      console.log('🎨 EDITOR: Photo upload completed');
-                      // If realtime is not connected, manually refresh
-                      if (!isRealtimeConnected) {
-                        handleManualRefresh();
-                      }
-                    }}
-                  />
-                </div>
-                
-                {/* Photos List */}
-                <div className="flex-1 overflow-y-auto">
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-white">Photos</h3>
-                      <button
-                        onClick={handleManualRefresh}
-                        className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded bg-gray-800 hover:bg-gray-700"
-                      >
-                        Refresh
-                      </button>
-                    </div>
-                    
-                    {safePhotos.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400">
-                        <Image className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>No photos yet</p>
-                        <p className="text-xs">Upload photos to see them here</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        {safePhotos.map((photo) => (
-                          <div key={photo.id} className="aspect-square rounded overflow-hidden bg-gray-800">
-                            <img 
-                              src={photo.url} 
-                              alt="Photo"
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+              <CollageScene 
+                photos={safePhotos}
+                settings={settings}
+                onSettingsChange={handleSettingsChange}
+              />
+            </ErrorBoundary>
           </div>
         </div>
       </div>

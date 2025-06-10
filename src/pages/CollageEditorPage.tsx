@@ -307,8 +307,8 @@ const CollageEditorPage: React.FC = () => {
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
                   }`}
                 >
-                  <Image className="w-3 h-3 mr-1.5" />
-                  Photos
+                  <Image className="w-3 h-3" />
+                  <span>Photos</span>
                 </button>
               </div>
             </div>
@@ -319,7 +319,7 @@ const CollageEditorPage: React.FC = () => {
                 <div className="p-4">
                   <SceneSettings
                     settings={settings}
-                    onChange={handleSettingsChange}
+                    onSettingsChange={handleSettingsChange}
                     onReset={handleResetSettings}
                   />
                 </div>
@@ -351,21 +351,21 @@ const CollageEditorPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* RIGHT SIDE - Main 3D Scene */}
-        <div className="flex-1 relative">
-          <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700/50 rounded-lg h-full overflow-hidden">
-            <ErrorBoundary 
-              FallbackComponent={SceneErrorFallback}
-              resetKeys={[currentCollage.id, settings, safePhotos.length]}
-            >
-              <CollageScene 
-                photos={safePhotos}
-                settings={settings}
-                onSettingsChange={handleSettingsChange}
-              />
-            </ErrorBoundary>
+          {/* RIGHT SIDE - Main 3D Scene */}
+          <div className="flex-1 relative">
+            <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700/50 rounded-lg h-full overflow-hidden">
+              <ErrorBoundary 
+                FallbackComponent={SceneErrorFallback}
+                resetKeys={[currentCollage.id, settings, safePhotos.length]}
+              >
+                <CollageScene 
+                  photos={safePhotos}
+                  settings={settings}
+                  onSettingsChange={handleSettingsChange}
+                />
+              </ErrorBoundary>
+            </div>
           </div>
         </div>
       </div>

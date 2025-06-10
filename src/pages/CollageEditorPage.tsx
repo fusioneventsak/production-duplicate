@@ -61,14 +61,15 @@ const CollageEditorPage: React.FC = () => {
   // SAFETY: Ensure photos is always an array
   const safePhotos = Array.isArray(photos) ? photos : [];
 
-  // DEBUG: Log photos changes in editor
+  // DEBUG: Log settings comparison
   useEffect(() => {
-    console.log('🎨 EDITOR: Photos array changed!');
-    console.log('🎨 Photo count:', safePhotos.length);
-    console.log('🎨 Photo IDs:', safePhotos.map(p => `${p.id.slice(-4)}(${new Date(p.created_at).toLocaleTimeString()})`));
-  }, [safePhotos]);
+    console.log('🎨 EDITOR: Settings comparison:');
+    console.log('🎨 Scene store settings (temp):', settings);
+    console.log('🎨 Collage settings (persisted):', currentCollage?.settings);
+    console.log('🎨 Using settings:', currentCollage?.settings || settings);
+  }, [settings, currentCollage?.settings]);
 
-  // Load collage data
+  // Load collage data and sync settings
   useEffect(() => {
     if (id) {
       console.log('🎨 EDITOR: Loading collage:', id);
@@ -80,6 +81,14 @@ const CollageEditorPage: React.FC = () => {
       cleanupRealtimeSubscription();
     };
   }, [id, fetchCollageById, cleanupRealtimeSubscription]);
+
+  // Sync persisted collage settings to scene store when collage loads
+  useEffect(() => {
+    if (currentCollage?.settings) {
+      console.log('🎨 EDITOR: Syncing collage settings to scene store:', currentCollage.settings);
+      updateSettings(currentCollage.settings);
+    }
+  }, [currentCollage?.settings, updateSettings]);
 
   // Auto-save settings with debounce
   const handleSettingsChange = (newSettings: Partial<any>) => {

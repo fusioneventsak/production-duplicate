@@ -1,51 +1,83 @@
+// src/components/three/patterns/FloatPattern.tsx - FIXED: Stable base positions
 import { BasePattern, type PatternState, type Position } from './BasePattern';
 
 export class FloatPattern extends BasePattern {
+  // CRITICAL: Use static base positions that never change
+  private static basePositions: { x: number; z: number; phaseOffset: number }[] | null = null;
+  private static maxSlotsGenerated = 0;
+
+  // Generate stable base positions that never change
+  private static generateStableBasePositions(maxSlots: number) {
+    if (!this.basePositions || maxSlots > this.maxSlotsGenerated) {
+      console.log('🎈 FLOAT: Generating stable base positions for', maxSlots, 'slots');
+      
+      // Always generate for the maximum possible slots to ensure stability
+      const totalSlots = Math.max(maxSlots, 500);
+      this.maxSlotsGenerated = totalSlots;
+      
+      const floorSize = 100; // Use fixed floor size for stability
+      const gridSize = Math.ceil(Math.sqrt(totalSlots));
+      const cellSize = floorSize / gridSize;
+      
+      this.basePositions = [];
+      
+      for (let i = 0; i < totalSlots; i++) {
+        // Create a grid-based distribution with deterministic randomness
+        const gridX = i % gridSize;
+        const gridZ = Math.floor(i / gridSize);
+        
+        // Deterministic pseudo-random values based on slot index (never changes)
+        const randomOffsetX = Math.sin(i * 0.73) * 0.5;
+        const randomOffsetZ = Math.cos(i * 1.37) * 0.5;
+        const phaseOffset = (i * 0.211) % 1; // 0 to 1, for staggering
+        
+        // Calculate position within the grid cell
+        const cellCenterX = (gridX + 0.5) * cellSize - floorSize / 2;
+        const cellCenterZ = (gridZ + 0.5) * cellSize - floorSize / 2;
+        
+        // Add randomness within the cell
+        const baseX = cellCenterX + (randomOffsetX * cellSize * 0.8);
+        const baseZ = cellCenterZ + (randomOffsetZ * cellSize * 0.8);
+        
+        this.basePositions.push({
+          x: baseX,
+          z: baseZ,
+          phaseOffset: phaseOffset
+        });
+      }
+      
+      console.log('🎈 FLOAT: Generated', this.basePositions.length, 'stable base positions');
+    }
+  }
+
   generatePositions(time: number): PatternState {
     const positions: Position[] = [];
     const rotations: [number, number, number][] = [];
     
     const totalPhotos = Math.min(this.settings.photoCount, 500);
     
-    // Floor area configuration
-    const floorSize = this.settings.floorSize || 100;
-    const fullFloorArea = floorSize;
+    // Ensure we have stable base positions generated
+    FloatPattern.generateStableBasePositions(totalPhotos);
+    
+    // Animation parameters (these can change without affecting base positions)
     const riseSpeed = 8; // Units per second rising speed
     const maxHeight = 60; // Maximum height before recycling
     const startHeight = -20; // Start well below the floor
     const cycleHeight = maxHeight - startHeight; // Total distance to travel
     
-    // Calculate grid-like distribution for better coverage
-    const gridSize = Math.ceil(Math.sqrt(totalPhotos));
-    const cellSize = fullFloorArea / gridSize;
-    
     const speed = this.settings.animationSpeed / 100;
     const animationTime = time * speed;
     
     for (let i = 0; i < totalPhotos; i++) {
-      // Create a grid-based distribution with randomness within each cell
-      const gridX = i % gridSize;
-      const gridZ = Math.floor(i / gridSize);
-      
-      // Deterministic pseudo-random values based on photo index
-      const randomOffsetX = Math.sin(i * 0.73) * 0.5;
-      const randomOffsetZ = Math.cos(i * 1.37) * 0.5;
-      const phaseOffset = (i * 0.211) % 1; // 0 to 1, for staggering
-      
-      // Calculate position within the grid cell
-      const cellCenterX = (gridX + 0.5) * cellSize - fullFloorArea / 2;
-      const cellCenterZ = (gridZ + 0.5) * cellSize - fullFloorArea / 2;
-      
-      // Add randomness within the cell
-      const baseX = cellCenterX + (randomOffsetX * cellSize * 0.8);
-      const baseZ = cellCenterZ + (randomOffsetZ * cellSize * 0.8);
+      // Get stable base position (never changes once generated)
+      const basePos = FloatPattern.basePositions![i];
       
       // Calculate Y position with proper wrapping
       let y: number;
       
       if (this.settings.animationEnabled) {
         // Calculate total distance traveled including the phase offset
-        const totalDistance = (animationTime * riseSpeed) + (phaseOffset * cycleHeight);
+        const totalDistance = (animationTime * riseSpeed) + (basePos.phaseOffset * cycleHeight);
         
         // Use modulo to wrap around when reaching the top
         const positionInCycle = totalDistance % cycleHeight;
@@ -57,12 +89,12 @@ export class FloatPattern extends BasePattern {
         y += Math.sin(animationTime * 2 + i * 0.3) * 0.4;
       } else {
         // Static position when animation is disabled - distribute evenly through the height
-        y = startHeight + (phaseOffset * cycleHeight);
+        y = startHeight + (basePos.phaseOffset * cycleHeight);
       }
       
       // Add horizontal position with gentle drift
-      let x = baseX;
-      let z = baseZ;
+      let x = basePos.x;
+      let z = basePos.z;
       
       if (this.settings.animationEnabled) {
         // Gentle horizontal drift as photos rise

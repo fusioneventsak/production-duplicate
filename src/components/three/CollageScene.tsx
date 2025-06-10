@@ -490,42 +490,58 @@ const PhotoMesh: React.FC<{
         toneMapped: false,
       });
       
+      // Apply brightness by modifying the material color - only for photos with textures
       brightnessMaterial.color.setScalar(brightness || 1.0);
+      
       return brightnessMaterial;
     } else {
-      // Empty slot material
+      // Empty slot material - NOT affected by brightness setting
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 512;
       const ctx = canvas.getContext('2d')!;
       
-      const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
-      gradient.addColorStop(0, emptySlotColor + 'CC');
-      gradient.addColorStop(0.7, emptySlotColor + '66');
-      gradient.addColorStop(1, emptySlotColor + '00');
-      
-      ctx.fillStyle = gradient;
+      // Fill with background color
+      ctx.fillStyle = emptySlotColor || '#1A1A1A';
       ctx.fillRect(0, 0, 512, 512);
       
-      const emptyTexture = new THREE.CanvasTexture(canvas);
-      emptyTexture.minFilter = THREE.LinearFilter;
-      emptyTexture.magFilter = THREE.LinearFilter;
+      // Add pattern
+      if (pattern === 'grid') {
+        ctx.strokeStyle = '#ffffff20';
+        ctx.lineWidth = 2;
+        for (let i = 0; i <= 512; i += 64) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, 512);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(0, i);
+          ctx.lineTo(512, i);
+          ctx.stroke();
+        }
+      }
       
+      const emptyTexture = new THREE.CanvasTexture(canvas);
       return new THREE.MeshStandardMaterial({
         map: emptyTexture,
-        transparent: true,
+        transparent: false,
+        opacity: 1.0, // Fully opaque empty slots
         side: THREE.DoubleSide,
-        opacity: 0.1,
+        color: 0xffffff, // Fixed white color for empty slots, not affected by brightness
       });
     }
-  }, [texture, emptySlotColor, brightness]);
-
-  const geometry = useMemo(() => {
-    return new THREE.PlaneGeometry(size, size);
-  }, [size]);
+  }, [texture, emptySlotColor, pattern, brightness]);
 
   return (
-    <mesh ref={meshRef} geometry={geometry} material={material} />
+    <mesh
+      ref={meshRef}
+      material={material}
+      castShadow
+      receiveShadow
+    >
+      {/* Add a very slight bevel to the plane for better light response */}
+      <planeGeometry args={[(size || 4.0) * (9/16), size || 4.0]} />
+    </mesh>
   );
 }, (prevProps, nextProps) => {
   // Custom comparison for memo - only re-render if key props changed
@@ -541,6 +557,34 @@ const PhotoMesh: React.FC<{
     )
   );
 });
+
+// Floor component
+const Floor: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
+  if (!settings.floorEnabled) return null;
+
+  const floorMaterial = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: settings.floorColor,
+      transparent: settings.floorOpacity < 1,
+      opacity: settings.floorOpacity,
+      metalness: Math.min(settings.floorMetalness || 0.5, 0.9),
+      roughness: Math.max(settings.floorRoughness || 0.5, 0.1),
+      side: THREE.DoubleSide,
+      envMapIntensity: 0.5,
+    });
+  }, [settings.floorColor, settings.floorOpacity, settings.floorMetalness, settings.floorRoughness]);
+
+  return (
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, -10, 0]}
+      receiveShadow
+    >
+      <planeGeometry args={[100, 100]} />
+      <primitive object={floorMaterial} attach="material" />
+    </mesh>
+  );
+};
 
 // Photo renderer with stable keys
 const PhotoRenderer: React.FC<{ 
@@ -613,6 +657,8 @@ const CollageScene: React.FC<CollageSceneProps> = ({ photos, settings, onSetting
           photosWithPositions={photosWithPositions}
           settings={safeSettings}
         />
+        
+        <Floor settings={safeSettings} />
         
         <ambientLight 
           intensity={safeSettings.ambientLightIntensity || 0.4} 

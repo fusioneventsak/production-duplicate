@@ -7,7 +7,7 @@ interface CollagePhotosProps {
   collageId: string;
 }
 
-export const CollagePhotos: React.FC<CollagePhotosProps> = ({ collageId }) => {
+const CollagePhotos: React.FC<CollagePhotosProps> = ({ collageId }) => {
   const { 
     photos, 
     loading, 
@@ -114,3 +114,6 @@ export const CollagePhotos: React.FC<CollagePhotosProps> = ({ collageId }) => {
     </div>
   );
 };
+
+// FIXED: Changed from named export to default export
+export default CollagePhotos;

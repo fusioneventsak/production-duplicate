@@ -1,4 +1,4 @@
-// src/components/three/CollageScene.tsx - COMPLETE FIX: Floor, Grid, Controls, and Stable Rendering
+// src/components/CollageScene.tsx - COMPLETE FIX: Floor, Grid, Controls, and Stable Rendering
 import React, { useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { type SceneSettings } from '../../store/sceneStore';
 import { PatternFactory } from './patterns/PatternFactory';
 import { addCacheBustToUrl } from '../../lib/supabase';
+import { useCollageStore } from '../../store/collageStore';
 
 type Photo = {
   id: string;
@@ -15,7 +16,6 @@ type Photo = {
 };
 
 type CollageSceneProps = {
-  photos: Photo[];
   settings: SceneSettings;
   onSettingsChange?: (settings: Partial<SceneSettings>, debounce?: boolean) => void;
 };
@@ -433,9 +433,10 @@ const AnimationController: React.FC<{
       lastPhotoIds.current = currentPhotoIds;
       
       // Update slot assignments immediately but don't force position recalculation
+      const safePhotos = Array.isArray(photos) ? photos.filter(p => p && p.id) : [];
       slotManagerRef.current.assignSlots(safePhotos);
     }
-  }, [currentPhotoIds, safePhotos]);
+  }, [currentPhotoIds, photos]);
 
   // Regular animation updates
   useFrame((state) => {
@@ -484,101 +485,6 @@ const BackgroundRenderer: React.FC<{ settings: SceneSettings }> = ({ settings })
   ]);
 
   return null;
-};
-
-// Enhanced PhotoMesh component for volumetric lighting
-const VolumetricSpotlight: React.FC<{
-  position: [number, number, number];
-  target: [number, number, number];
-  color: string;
-  intensity: number;
-  angle: number;
-  distance: number;
-  penumbra: number;
-}> = ({ position, target, color, intensity, angle, distance, penumbra }) => {
-  const lightRef = useRef<THREE.SpotLight>(null);
-  const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
-
-  useEffect(() => {
-    if (targetRef.current) {
-      targetRef.current.position.set(...target);
-    }
-  }, [target]);
-
-  useEffect(() => {
-    if (lightRef.current && targetRef.current) {
-      lightRef.current.target = targetRef.current;
-    }
-  }, []);
-
-  return (
-    <group>
-      <spotLight
-        ref={lightRef}
-        position={position}
-        color={color}
-        intensity={intensity}
-        angle={angle}
-        distance={distance}
-        penumbra={penumbra}
-        castShadow={true}
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-near={0.1}
-        shadow-camera-far={distance}
-        shadow-camera-fov={angle * 180 / Math.PI}
-      />
-      <primitive object={targetRef.current} />
-    </group>
-  );
-};
-
-// Dynamic lighting system
-const DynamicLightingSystem: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
-  const lights = useMemo(() => {
-    const lightCount = Math.min(settings.spotlightCount || 1, 4);
-    const lightArray = [];
-    
-    for (let i = 0; i < lightCount; i++) {
-      const angle = (i / lightCount) * Math.PI * 2;
-      const radius = 15 + Math.sin(i * 2.3) * 5;
-      const height = 10 + Math.cos(i * 1.7) * 5;
-      const intensityVariation = 0.8 + Math.sin(i * 3.1) * 0.2;
-      
-      lightArray.push({
-        position: [
-          Math.cos(angle) * radius,
-          height,
-          Math.sin(angle) * radius
-        ] as [number, number, number],
-        target: [0, 0, 0] as [number, number, number],
-        intensityVariation,
-      });
-    }
-    
-    return lightArray;
-  }, [settings.spotlightCount]);
-
-  return (
-    <group>
-      {lights.map((light, index) => {
-        const adjustedAngle = Math.max(0.1, Math.min(Math.PI / 3, (settings.spotlightAngle || 30) * Math.PI / 180));
-        
-        return (
-          <group key={index}>
-            <VolumetricSpotlight
-              position={light.position}
-              target={light.target}
-              angle={adjustedAngle}
-              color={settings.spotlightColor || '#ffffff'}
-              intensity={(settings.spotlightIntensity || 1) * light.intensityVariation}
-              distance={settings.spotlightDistance || 50}
-              penumbra={settings.spotlightPenumbra || 0.5}
-            />
-          </group>
-        );
-      })}
-    </group>
-  );
 };
 
 // ENHANCED: PhotoMesh with FIXED empty slot color
@@ -790,19 +696,9 @@ const PhotoRenderer: React.FC<{
   );
 };
 
-// Debug component to track photo changes
-const PhotoDebugger: React.FC<{ photos: Photo[] }> = ({ photos }) => {
-  useEffect(() => {
-    console.log('🔍 PHOTO DEBUGGER: Photos updated in scene');
-    console.log('🔍 Count:', photos?.length || 0);
-    console.log('🔍 IDs:', (photos || []).map(p => p.id.slice(-4)));
-  }, [photos]);
-  
-  return null;
-};
-
 // Main CollageScene component
-const CollageScene: React.FC<CollageSceneProps> = ({ photos, settings, onSettingsChange }) => {
+const CollageScene: React.FC<CollageSceneProps> = ({ settings, onSettingsChange }) => {
+  const { photos } = useCollageStore();
   const [photosWithPositions, setPhotosWithPositions] = useState<PhotoWithPosition[]>([]);
 
   const safePhotos = Array.isArray(photos) ? photos : [];
@@ -875,14 +771,10 @@ const CollageScene: React.FC<CollageSceneProps> = ({ photos, settings, onSetting
           onPositionsUpdate={setPhotosWithPositions}
         />
         
-        <PhotoDebugger photos={safePhotos} />
-        
         <PhotoRenderer 
           photosWithPositions={photosWithPositions}
           settings={safeSettings}
         />
-        
-        <DynamicLightingSystem settings={safeSettings} />
       </Canvas>
     </div>
   );

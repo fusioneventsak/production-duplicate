@@ -214,6 +214,7 @@ const CameraController: React.FC<{ settings: SceneSettings }> = ({ settings }) =
   useFrame((state, delta) => {
     if (!controlsRef.current) return;
 
+    // Only auto-rotate if camera rotation is enabled AND user isn't interacting
     if (settings.cameraRotationEnabled && !userInteractingRef.current) {
       const offset = new THREE.Vector3().copy(camera.position).sub(controlsRef.current.target);
       const spherical = new THREE.Spherical().setFromVector3(offset);
@@ -226,19 +227,33 @@ const CameraController: React.FC<{ settings: SceneSettings }> = ({ settings }) =
     }
   });
 
-  // ALWAYS return controls - they should be enabled by default
+  // FIXED: Always return controls but respect cameraEnabled setting
   return (
     <OrbitControls
       ref={controlsRef}
-      enablePan={settings.controlsEnabled !== false} // Default to true
-      enableZoom={settings.controlsEnabled !== false}
-      enableRotate={settings.controlsEnabled !== false}
+      enabled={settings.cameraEnabled !== false} // Can be disabled via settings
+      enablePan={true}
+      enableZoom={true}
+      enableRotate={true}
       minDistance={5}
       maxDistance={200}
       minPolarAngle={Math.PI / 6}
       maxPolarAngle={Math.PI - Math.PI / 6}
       enableDamping={true}
       dampingFactor={0.05}
+      zoomSpeed={1.0}
+      rotateSpeed={1.0}
+      panSpeed={1.0}
+      // Enable touch controls for mobile
+      touches={{
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN
+      }}
+      mouseButtons={{
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN
+      }}
     />
   );
 };

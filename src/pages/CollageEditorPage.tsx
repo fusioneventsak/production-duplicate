@@ -228,76 +228,72 @@ const CollageEditorPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-[1920px] mx-auto h-[calc(100vh-80px)] flex gap-6 p-6">
-        {/* LEFT SIDEBAR - Settings Panel */}
-        <div className="w-80 flex-shrink-0">
-          <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-xl h-full flex flex-col">
-            {/* Header */}
-            <div className="p-6 border-b border-gray-700">
-              <div className="flex items-center justify-between mb-4">
+      <div className="max-w-[1920px] mx-auto h-[calc(100vh-80px)] flex gap-4 p-4">
+        {/* LEFT SIDEBAR - Maximized Settings Panel */}
+        <div className="w-96 flex-shrink-0">
+          <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg h-full flex flex-col">
+            {/* Compact Header */}
+            <div className="p-4 border-b border-gray-700 bg-gray-800/50">
+              <div className="flex items-center justify-between mb-3">
                 <Link 
                   to="/dashboard" 
                   className="text-gray-400 hover:text-white transition-colors"
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-5 h-5" />
                 </Link>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   <div className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                  <span className="text-xs text-gray-400">
-                    {isRealtimeConnected ? 'Live' : 'Reconnecting...'}
+                  <span className="text-xs text-gray-400 font-mono">
+                    {currentCollage.code}
                   </span>
+                  <span className="text-xs text-gray-500">•</span>
+                  <span className="text-xs text-gray-400">{safePhotos.length} photos</span>
                 </div>
               </div>
               
-              <div>
-                <h1 className="text-xl font-bold text-white mb-2">{currentCollage.name}</h1>
-                <div className="flex items-center space-x-2 text-gray-400 text-sm">
-                  <span>Code: <span className="text-purple-400 font-mono">{currentCollage.code}</span></span>
-                  <span>•</span>
-                  <span>{safePhotos.length} photos</span>
-                </div>
+              <div className="text-center">
+                <h1 className="text-lg font-bold text-white truncate">{currentCollage.name}</h1>
+                {saving && (
+                  <div className="mt-1 text-xs text-purple-400 flex items-center justify-center">
+                    <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Saving...
+                  </div>
+                )}
               </div>
-              
-              {saving && (
-                <div className="mt-2 text-xs text-purple-400 flex items-center">
-                  <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Saving changes...
-                </div>
-              )}
             </div>
 
-            {/* Tab Navigation */}
-            <div className="px-6 py-4 border-b border-gray-700">
-              <div className="flex space-x-1 bg-gray-800/50 rounded-lg p-1">
+            {/* Minimal Tab Navigation */}
+            <div className="px-4 py-3 border-b border-gray-700/50">
+              <div className="flex space-x-1 bg-gray-800/50 rounded-md p-1">
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className={`flex-1 flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 flex items-center justify-center px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                     activeTab === 'settings'
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
                   }`}
                 >
-                  <Settings className="w-4 h-4 mr-2" />
+                  <Settings className="w-3 h-3 mr-1.5" />
                   Scene
                 </button>
                 <button
                   onClick={() => setActiveTab('photos')}
-                  className={`flex-1 flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 flex items-center justify-center px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                     activeTab === 'photos'
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
                   }`}
                 >
-                  <Image className="w-4 h-4 mr-2" />
+                  <Image className="w-3 h-3 mr-1.5" />
                   Photos
                 </button>
               </div>
             </div>
 
-            {/* Content */}
+            {/* Maximized Content Area */}
             <div className="flex-1 overflow-auto">
               {activeTab === 'settings' ? (
-                <div className="p-6">
+                <div className="p-4">
                   <SceneSettings
                     settings={settings}
                     onSettingsChange={handleSettingsChange}
@@ -305,7 +301,7 @@ const CollageEditorPage: React.FC = () => {
                   />
                 </div>
               ) : (
-                <div className="p-6 space-y-6">
+                <div className="p-4 space-y-4">
                   <PhotoUploader />
                   <CollagePhotos 
                     collageId={currentCollage.id}
@@ -315,21 +311,20 @@ const CollageEditorPage: React.FC = () => {
               )}
             </div>
 
-            {/* Footer Actions */}
-            <div className="p-6 border-t border-gray-700">
-              <div className="flex space-x-3">
+            {/* Compact Footer */}
+            <div className="p-4 border-t border-gray-700/50 bg-gray-800/30">
+              <div className="flex space-x-2">
                 <Link
                   to={`/collage/${currentCollage.code}`}
-                  className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-center rounded-lg transition-colors text-sm font-medium"
+                  className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-center rounded text-sm font-medium transition-colors"
                 >
                   View Live
                 </Link>
                 <Link
                   to={`/collage/${currentCollage.code}/moderation`}
-                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-center rounded-lg transition-colors text-sm font-medium"
+                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
                 >
-                  <Shield className="w-4 h-4 inline mr-1" />
-                  Moderate
+                  <Shield className="w-4 h-4" />
                 </Link>
               </div>
             </div>
@@ -338,7 +333,7 @@ const CollageEditorPage: React.FC = () => {
 
         {/* RIGHT SIDE - Main 3D Scene */}
         <div className="flex-1 relative">
-          <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-xl h-full overflow-hidden">
+          <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700/50 rounded-lg h-full overflow-hidden">
             <ErrorBoundary 
               FallbackComponent={SceneErrorFallback}
               resetKeys={[currentCollage.id, settings, safePhotos.length]}

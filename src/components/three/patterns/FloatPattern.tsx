@@ -18,8 +18,8 @@ export class FloatPattern extends BasePattern {
       const totalSlots = Math.max(maxSlots, 500);
       FloatPattern.maxSlotsGenerated = Math.max(FloatPattern.maxSlotsGenerated, totalSlots);
       
-      // Use the actual floor size from settings (dynamic!)
-      const fullFloorArea = floorSize;
+      // FIXED: Use full floor area with proper coverage
+      const fullFloorArea = floorSize * 0.9; // Use 90% of floor to avoid edge issues
       const gridSize = Math.ceil(Math.sqrt(totalSlots));
       const cellSize = fullFloorArea / gridSize;
       
@@ -31,28 +31,29 @@ export class FloatPattern extends BasePattern {
         const gridZ = Math.floor(i / gridSize);
         
         // Deterministic pseudo-random values based on slot index (never changes)
-        const randomOffsetX = Math.sin(i * 0.73) * 0.5;
-        const randomOffsetZ = Math.cos(i * 1.37) * 0.5;
+        const randomOffsetX = Math.sin(i * 0.73) * 0.4; // Reduced randomness for better coverage
+        const randomOffsetZ = Math.cos(i * 1.37) * 0.4;
         const phaseOffset = (i * 0.211) % 1; // 0 to 1, for staggering
         
-        // Calculate position within the grid cell
-        const cellCenterX = (gridX + 0.5) * cellSize - fullFloorArea / 2;
-        const cellCenterZ = (gridZ + 0.5) * cellSize - fullFloorArea / 2;
+        // FIXED: Calculate position to cover full floor area
+        // Start from edge to edge instead of centering
+        const baseX = (gridX * cellSize) - (fullFloorArea / 2) + (cellSize / 2);
+        const baseZ = (gridZ * cellSize) - (fullFloorArea / 2) + (cellSize / 2);
         
-        // Add randomness within the cell
-        const baseX = cellCenterX + (randomOffsetX * cellSize * 0.8);
-        const baseZ = cellCenterZ + (randomOffsetZ * cellSize * 0.8);
+        // Add controlled randomness within the cell (smaller range)
+        const finalX = baseX + (randomOffsetX * cellSize * 0.6);
+        const finalZ = baseZ + (randomOffsetZ * cellSize * 0.6);
         
         positions.push({
-          x: baseX,
-          z: baseZ,
+          x: finalX,
+          z: finalZ,
           phaseOffset: phaseOffset
         });
       }
       
       // Cache the positions for this floor size
       FloatPattern.basePositionsCache.set(cacheKey, positions);
-      console.log('🎈 FLOAT: Cached', positions.length, 'positions for floor size', floorSize);
+      console.log('🎈 FLOAT: Cached', positions.length, 'positions covering full floor area', fullFloorArea);
     }
     
     return FloatPattern.basePositionsCache.get(cacheKey)!;

@@ -106,13 +106,20 @@ class SlotManager {
   }
 }
 
-// Floor component
+// Floor component - FIXED to use all settings properly  
 const Floor: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
   if (!settings.floorEnabled) return null;
 
   const floorMaterial = useMemo(() => {
+    console.log('🏢 FLOOR: Creating floor with settings:', {
+      floorEnabled: settings.floorEnabled,
+      floorSize: settings.floorSize,
+      floorColor: settings.floorColor,
+      floorOpacity: settings.floorOpacity
+    });
+
     return new THREE.MeshStandardMaterial({
-      color: settings.floorColor || '#1a1a2e',
+      color: settings.floorColor || '#1A1A1A',
       transparent: (settings.floorOpacity || 1) < 1,
       opacity: settings.floorOpacity || 1,
       metalness: Math.min(settings.floorMetalness || 0.5, 0.9),
@@ -128,33 +135,42 @@ const Floor: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
       position={[0, -10, 0]}
       receiveShadow
     >
-      <planeGeometry args={[settings.floorSize || 100, settings.floorSize || 100, 32, 32]} />
+      <planeGeometry args={[settings.floorSize || 200, settings.floorSize || 200, 32, 32]} />
       <primitive object={floorMaterial} attach="material" />
     </mesh>
   );
 };
 
-// Grid component
+// Grid component - FIXED to use all settings properly
 const Grid: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
   if (!settings.gridEnabled) return null;
 
   const gridHelper = useMemo(() => {
+    console.log('🔧 GRID: Creating grid with settings:', {
+      gridEnabled: settings.gridEnabled,
+      gridSize: settings.gridSize,
+      gridDivisions: settings.gridDivisions,
+      gridColor: settings.gridColor,
+      gridOpacity: settings.gridOpacity
+    });
+
     const helper = new THREE.GridHelper(
-      settings.gridSize || 100,
-      settings.gridDivisions || 20,
-      settings.gridColor || '#ffffff',
-      settings.gridColor || '#ffffff'
+      settings.gridSize || 200,
+      settings.gridDivisions || 30,
+      settings.gridColor || '#444444',
+      settings.gridColor || '#444444'
     );
     
     const material = helper.material as THREE.LineBasicMaterial;
     material.transparent = true;
-    material.opacity = Math.min(settings.gridOpacity || 0.3, 0.8);
-    material.color = new THREE.Color(settings.gridColor || '#ffffff');
+    material.opacity = Math.min(settings.gridOpacity || 1.0, 1.0);
+    material.color = new THREE.Color(settings.gridColor || '#444444');
     
     helper.position.y = -9.99; // Just above the floor
     
+    console.log('🔧 GRID: Grid created and positioned');
     return helper;
-  }, [settings.gridSize, settings.gridDivisions, settings.gridColor, settings.gridOpacity]);
+  }, [settings.gridEnabled, settings.gridSize, settings.gridDivisions, settings.gridColor, settings.gridOpacity]);
 
   return <primitive object={gridHelper} />;
 };
@@ -225,6 +241,13 @@ const CameraController: React.FC<{ settings: SceneSettings }> = ({ settings }) =
       camera.position.copy(newPosition);
       controlsRef.current.update();
     }
+  });
+
+  console.log('🎥 CAMERA: Controls state:', {
+    cameraEnabled: settings.cameraEnabled,
+    cameraRotationEnabled: settings.cameraRotationEnabled,
+    cameraDistance: settings.cameraDistance,
+    cameraHeight: settings.cameraHeight
   });
 
   // FIXED: Always return controls but respect cameraEnabled setting
@@ -398,26 +421,21 @@ const AnimationController: React.FC<{
     }
   }, [settings.photoCount, updatePositions]);
 
-  // ENHANCED: Handle photo changes more carefully - avoid immediate position updates
+  // ENHANCED: Handle photo changes without immediate position updates (prevents jumping)
   useEffect(() => {
     if (currentPhotoIds !== lastPhotoIds.current) {
-      console.log('📷 PHOTOS CHANGED: New upload detected');
+      console.log('📷 PHOTOS CHANGED: New upload detected - using gradual update');
       console.log('📷 Old IDs:', lastPhotoIds.current);
       console.log('📷 New IDs:', currentPhotoIds);
       
-      // Don't force immediate position update - let animation frame handle it
+      // CRITICAL FIX: Don't force immediate position update
+      // Let the natural animation frame handle the change gradually
       lastPhotoIds.current = currentPhotoIds;
       
-      // Cancel any pending animation frame and schedule a new one
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      
-      animationFrameRef.current = requestAnimationFrame(() => {
-        updatePositions(0);
-      });
+      // Update slot assignments immediately but don't force position recalculation
+      slotManagerRef.current.assignSlots(safePhotos);
     }
-  }, [currentPhotoIds, updatePositions]);
+  }, [currentPhotoIds, safePhotos]);
 
   // Regular animation updates
   useFrame((state) => {

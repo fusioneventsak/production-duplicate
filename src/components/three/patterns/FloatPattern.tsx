@@ -12,37 +12,30 @@ export class FloatPattern extends BasePattern {
     const cacheKey = `${floorSize}-${maxSlots}`;
     
     if (!FloatPattern.basePositionsCache.has(cacheKey) || maxSlots > FloatPattern.maxSlotsGenerated) {
-      console.log('🎈 FLOAT: Generating dynamic positions for floor size:', floorSize, 'slots:', maxSlots);
+      console.log('🎈 FLOAT: Generating edge-to-edge positions for floor size:', floorSize, 'slots:', maxSlots);
       
       // Always generate for the maximum possible slots to ensure stability
       const totalSlots = Math.max(maxSlots, 500);
       FloatPattern.maxSlotsGenerated = Math.max(FloatPattern.maxSlotsGenerated, totalSlots);
       
-      // FIXED: Use full floor area with proper coverage
-      const fullFloorArea = floorSize * 0.9; // Use 90% of floor to avoid edge issues
-      const gridSize = Math.ceil(Math.sqrt(totalSlots));
-      const cellSize = fullFloorArea / gridSize;
+      // FIXED: Use FULL floor area edge-to-edge
+      const fullFloorArea = floorSize; // Use entire floor
+      const halfFloor = fullFloorArea / 2;
       
       const positions = [];
       
       for (let i = 0; i < totalSlots; i++) {
-        // Create a grid-based distribution with deterministic randomness
-        const gridX = i % gridSize;
-        const gridZ = Math.floor(i / gridSize);
+        // COMPLETELY DIFFERENT APPROACH: Direct random distribution across entire floor
+        // Use deterministic random but cover the FULL area
         
         // Deterministic pseudo-random values based on slot index (never changes)
-        const randomOffsetX = Math.sin(i * 0.73) * 0.4; // Reduced randomness for better coverage
-        const randomOffsetZ = Math.cos(i * 1.37) * 0.4;
+        const randomX = Math.sin(i * 2.73 + 1.123); // -1 to 1
+        const randomZ = Math.cos(i * 3.37 + 2.456); // -1 to 1
         const phaseOffset = (i * 0.211) % 1; // 0 to 1, for staggering
         
-        // FIXED: Calculate position to cover full floor area
-        // Start from edge to edge instead of centering
-        const baseX = (gridX * cellSize) - (fullFloorArea / 2) + (cellSize / 2);
-        const baseZ = (gridZ * cellSize) - (fullFloorArea / 2) + (cellSize / 2);
-        
-        // Add controlled randomness within the cell (smaller range)
-        const finalX = baseX + (randomOffsetX * cellSize * 0.6);
-        const finalZ = baseZ + (randomOffsetZ * cellSize * 0.6);
+        // EDGE-TO-EDGE: Map random values directly to full floor bounds
+        const finalX = randomX * halfFloor; // -halfFloor to +halfFloor
+        const finalZ = randomZ * halfFloor; // -halfFloor to +halfFloor
         
         positions.push({
           x: finalX,
@@ -53,7 +46,7 @@ export class FloatPattern extends BasePattern {
       
       // Cache the positions for this floor size
       FloatPattern.basePositionsCache.set(cacheKey, positions);
-      console.log('🎈 FLOAT: Cached', positions.length, 'positions covering full floor area', fullFloorArea);
+      console.log('🎈 FLOAT: Generated', positions.length, 'positions across FULL floor area', fullFloorArea, 'edge-to-edge');
     }
     
     return FloatPattern.basePositionsCache.get(cacheKey)!;

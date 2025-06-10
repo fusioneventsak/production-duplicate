@@ -1,7 +1,7 @@
 // src/components/collage/CollagePhotos.tsx
 import React, { useEffect } from 'react';
 import { useCollageStore } from '../../store/collageStore';
-import { PhotoUploader } from './PhotoUploader';
+import PhotoUploader from './PhotoUploader'; // FIXED: Changed from named import to default import
 
 interface CollagePhotosProps {
   collageId: string;
@@ -88,9 +88,8 @@ export const CollagePhotos: React.FC<CollagePhotosProps> = ({ collageId }) => {
 
       {/* Photos Grid */}
       {photos.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No photos uploaded yet.</p>
-          <p className="text-sm text-gray-400 mt-1">Upload some photos to get started!</p>
+        <div className="text-center py-8">
+          <p className="text-gray-500">No photos uploaded yet</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -98,46 +97,20 @@ export const CollagePhotos: React.FC<CollagePhotosProps> = ({ collageId }) => {
             <div key={photo.id} className="relative group">
               <img
                 src={photo.url}
-                alt={`Photo ${photo.id}`}
-                className="w-full h-32 object-cover rounded-lg shadow-sm"
-                onError={(e) => {
-                  console.error('Image failed to load:', photo.url);
-                  e.currentTarget.src = '/placeholder-image.png';
-                }}
+                alt="Collage photo"
+                className="w-full h-32 object-cover rounded-lg"
               />
-              
-              {/* Delete Button */}
               <button
                 onClick={() => handleDeletePhoto(photo.id)}
-                className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 title="Delete photo"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ×
               </button>
-
-              {/* Photo Info */}
-              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-b-lg">
-                <p className="truncate">ID: {photo.id.slice(-8)}</p>
-                <p className="truncate">
-                  Uploaded: {new Date(photo.created_at).toLocaleDateString()}
-                </p>
-              </div>
             </div>
           ))}
         </div>
       )}
-
-      {/* Refresh Button */}
-      <div className="flex justify-center pt-4">
-        <button
-          onClick={() => fetchPhotosByCollageId(collageId)}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
-        >
-          Refresh Photos
-        </button>
-      </div>
     </div>
   );
 };

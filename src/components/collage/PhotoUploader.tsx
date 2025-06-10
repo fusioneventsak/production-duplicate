@@ -79,67 +79,42 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ collageId, onUploadComple
     ));
   };
 
-  // Remove file from upload list
-  const removeFile = (id: string) => {
-    setFileUploads(prev => prev.filter(upload => upload.id !== id));
-  };
-
   // Process uploads with progress tracking
   const processUploads = async (uploads: FileUpload[]) => {
-    if (isUploading) return;
-    
     setIsUploading(true);
-    const batchSize = 3; // Process 3 files at a time to avoid overwhelming
 
+    // Process uploads in batches of 3 for better performance
+    const batchSize = 3;
     for (let i = 0; i < uploads.length; i += batchSize) {
       const batch = uploads.slice(i, i + batchSize);
       
       const uploadPromises = batch.map(async (upload) => {
-        if (upload.status !== 'pending') return;
-        
         try {
-          updateFileStatus(upload.id, { 
-            status: 'uploading', 
-            progress: 10 
-          });
+          updateFileStatus(upload.id, { status: 'uploading', progress: 10 });
 
-          // Simulate upload progress
+          // Simulate progress updates
           const progressInterval = setInterval(() => {
             setFileUploads(prev => prev.map(u => 
-              u.id === upload.id && u.progress < 90 ? 
-                { ...u, progress: u.progress + Math.random() * 15 } : u
+              u.id === upload.id && u.status === 'uploading'
+                ? { ...u, progress: Math.min(u.progress + 20, 90) }
+                : u
             ));
-          }, 200);
+          }, 300);
 
-          // Actual upload using the store method
-          console.log('📸 UPLOADER: Starting upload for:', upload.file.name);
-          const result = await uploadPhoto(collageId, upload.file);
+          // Upload the photo
+          await uploadPhoto(collageId, upload.file);
           
           clearInterval(progressInterval);
+          updateFileStatus(upload.id, { 
+            status: 'success', 
+            progress: 100 
+          });
 
-          if (result) {
-            updateFileStatus(upload.id, { 
-              status: 'success', 
-              progress: 100 
-            });
-            
-            console.log('✅ UPLOADER: Photo uploaded successfully:', result.id);
-            console.log('🔔 UPLOADER: Real-time subscription will handle the UI update automatically');
-            
-            // Auto-remove successful uploads after 3 seconds
-            setTimeout(() => {
-              removeFile(upload.id);
-            }, 3000);
-            
-            // Call completion callback if provided
-            if (onUploadComplete) {
-              onUploadComplete();
-            }
-          } else {
-            throw new Error('Upload failed without specific error');
-          }
+          // Call completion callback
+          onUploadComplete?.();
+
         } catch (error: any) {
-          console.error('❌ UPLOADER: Upload failed:', error);
+          console.error('Upload failed:', error);
           updateFileStatus(upload.id, { 
             status: 'error', 
             progress: 0,
@@ -295,93 +270,60 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ collageId, onUploadComple
                 {/* Preview */}
                 <div className="w-12 h-12 bg-gray-600 rounded-lg overflow-hidden flex-shrink-0">
                   {upload.preview ? (
-                    <img
-                      src={upload.preview}
-                      alt="Preview"
+                    <img 
+                      src={upload.preview} 
+                      alt="Preview" 
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Image className="w-6 h-6 text-gray-400" />
+                      <Image className="w-5 h-5 text-gray-400" />
                     </div>
                   )}
                 </div>
-                
+
                 {/* File Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2">
-                    {getStatusIcon(upload)}
+                  <div className="flex items-center justify-between">
                     <p className="text-white text-sm font-medium truncate">
                       {upload.file.name}
                     </p>
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(upload)}
+                    </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 mt-1">
-                    <p className="text-gray-400 text-xs">
-                      {(upload.file.size / 1024 / 1024).toFixed(1)} MB
-                    </p>
-                    
-                    {upload.status === 'uploading' && (
-                      <>
-                        <span className="text-gray-400">•</span>
-                        <p className="text-blue-400 text-xs">
-                          {Math.round(upload.progress)}%
-                        </p>
-                      </>
-                    )}
-                    
-                    {upload.status === 'error' && upload.error && (
-                      <>
-                        <span className="text-gray-400">•</span>
-                        <p className="text-red-400 text-xs">
-                          {upload.error}
-                        </p>
-                      </>
-                    )}
-                    
-                    {upload.status === 'success' && (
-                      <>
-                        <span className="text-gray-400">•</span>
-                        <p className="text-green-400 text-xs">
-                          Uploaded successfully
-                        </p>
-                      </>
-                    )}
-                  </div>
-                  
+                  <p className="text-gray-400 text-xs">
+                    {(upload.file.size / 1024 / 1024).toFixed(1)}MB
+                  </p>
+
                   {/* Progress Bar */}
                   {upload.status === 'uploading' && (
-                    <div className="w-full bg-gray-600 rounded-full h-1.5 mt-2">
-                      <div
-                        className="bg-blue-500 h-1.5 rounded-full transition-all duration-200"
-                        style={{ width: `${upload.progress}%` }}
-                      />
+                    <div className="mt-2">
+                      <div className="w-full bg-gray-600 rounded-full h-1.5">
+                        <div 
+                          className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                          style={{ width: `${upload.progress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">{upload.progress}%</p>
                     </div>
                   )}
-                </div>
-                
-                {/* Actions */}
-                <div className="flex items-center space-x-1">
-                  {upload.status === 'error' && (
-                    <button
-                      onClick={() => processUploads([upload])}
-                      className="p-1 text-gray-400 hover:text-white"
-                      title="Retry upload"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
-                  )}
-                  
-                  {(upload.status === 'pending' || upload.status === 'error') && (
-                    <button
-                      onClick={() => removeFile(upload.id)}
-                      className="p-1 text-gray-400 hover:text-red-400"
-                      title="Remove file"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+
+                  {/* Error Message */}
+                  {upload.status === 'error' && upload.error && (
+                    <p className="text-red-400 text-xs mt-1">{upload.error}</p>
                   )}
                 </div>
+
+                {/* Remove Button */}
+                <button
+                  onClick={() => setFileUploads(prev => prev.filter(u => u.id !== upload.id))}
+                  className="text-gray-400 hover:text-white p-1"
+                  title="Remove from queue"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>

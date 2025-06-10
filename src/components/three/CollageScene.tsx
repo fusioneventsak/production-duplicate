@@ -281,8 +281,10 @@ const CameraController: React.FC<{ settings: SceneSettings }> = ({ settings }) =
   );
 };
 
-// Scene Lighting component with FIXED spotlight controls
+// Scene Lighting component with WORKING spotlights  
 const SceneLighting: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
+  const groupRef = useRef<THREE.Group>(null);
+
   const spotlights = useMemo(() => {
     const lights = [];
     const count = Math.min(settings.spotlightCount || 4, 4);
@@ -290,7 +292,7 @@ const SceneLighting: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2;
       
-      // Use EXACT settings values for full control
+      // Position spotlights in a circle around the scene
       const x = Math.cos(angle) * (settings.spotlightDistance || 40);
       const z = Math.sin(angle) * (settings.spotlightDistance || 40);
       const y = settings.spotlightHeight || 30;
@@ -310,44 +312,58 @@ const SceneLighting: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
   ]);
 
   return (
-    <>
+    <group ref={groupRef}>
+      {/* Ambient light */}
       <ambientLight 
         intensity={settings.ambientLightIntensity || 0.4} 
-        color={settings.ambientLightColor || '#ffffff'} 
+        color="#ffffff" 
       />
       
-      <pointLight 
-        position={[10, 10, 10]} 
-        intensity={settings.pointLightIntensity || 0.8}
-        color={settings.pointLightColor || '#ffffff'}
-        castShadow={settings.shadowsEnabled}
-        shadow-mapSize={[1024, 1024]}
-      />
-      
+      {/* Main directional light */}
       <directionalLight
-        position={[5, 10, 5]}
-        intensity={0.5}
+        position={[20, 30, 20]}
+        intensity={0.3}
         color="#ffffff"
         castShadow={settings.shadowsEnabled}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-far={200}
+        shadow-camera-left={-100}
+        shadow-camera-right={100}
+        shadow-camera-top={100}
+        shadow-camera-bottom={-100}
+        shadow-bias={-0.0001}
       />
-
-      {/* Fully controllable spotlights using ALL UI settings */}
-      {spotlights.map((light) => (
-        <spotLight
-          key={light.key}
-          position={light.position}
-          target-position={light.target}
-          angle={Math.max(0.1, Math.min(Math.PI / 2, settings.spotlightAngle || 0.6))}
-          penumbra={settings.spotlightPenumbra || 0.4}
-          intensity={((settings.spotlightIntensity || 150) / 100) * 2}
-          color={settings.spotlightColor || '#ffffff'}
-          distance={(settings.spotlightDistance || 40) * 3}
-          decay={1.5}
-          castShadow={settings.shadowsEnabled}
-          shadow-mapSize={[1024, 1024]}
-        />
-      ))}
-    </>
+      
+      {/* Working spotlights positioned around the scene */}
+      {spotlights.map((light) => {
+        const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
+        
+        return (
+          <group key={light.key}>
+            <spotLight
+              position={light.position}
+              target={targetRef.current}
+              angle={Math.max(0.1, Math.min(Math.PI / 2, settings.spotlightAngle || 0.6))}
+              penumbra={settings.spotlightPenumbra || 0.4}
+              intensity={((settings.spotlightIntensity || 150) / 100) * 3}
+              color={settings.spotlightColor || '#ffffff'}
+              distance={(settings.spotlightDistance || 40) * 4}
+              decay={1.5}
+              castShadow={settings.shadowsEnabled}
+              castShadow
+              shadow-mapSize={[1024, 1024]}
+              shadow-camera-near={0.5}
+              shadow-camera-far={(settings.spotlightDistance || 40) * 4}
+              shadow-bias={-0.0001}
+            />
+            <primitive 
+              object={targetRef.current} 
+              position={light.target}
+            />
+          </group>
+        );
+      })}
+    </group>
   );
 };
 

@@ -1,4 +1,4 @@
-// src/pages/CollageViewerPage.tsx - ENHANCED WITH REAL-TIME PHOTO REMOVAL
+// src/pages/CollageViewerPage.tsx - Clean version without debugging
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Share2, Upload, Edit, Maximize2, ChevronLeft } from 'lucide-react';
@@ -50,23 +50,6 @@ const CollageViewerPage: React.FC = () => {
   const [controlsVisible, setControlsVisible] = useState(true);
   const navigate = useNavigate();
 
-  // CRITICAL: Debug logging for photo changes with more detail
-  useEffect(() => {
-    console.log('🔥 COLLAGE VIEWER: Photos array changed!');
-    console.log('🔥 Photo count:', safePhotos.length);
-    console.log('🔥 Photo IDs:', safePhotos.map(p => `${p.id.slice(-4)}(${new Date(p.created_at).toLocaleTimeString()})`));
-    console.log('🔥 Full photos array:', safePhotos);
-  }, [safePhotos]);
-
-  // Debug: Log store state changes
-  useEffect(() => {
-    console.log('🔥 STORE STATE CHANGE:');
-    console.log('🔥 Current collage:', currentCollage?.name);
-    console.log('🔥 Loading:', loading);
-    console.log('🔥 Error:', error);
-    console.log('🔥 Realtime connected:', isRealtimeConnected);
-  }, [currentCollage, loading, error, isRealtimeConnected]);
-
   // Handle fullscreen toggle
   const toggleFullscreen = async () => {
     try {
@@ -84,23 +67,20 @@ const CollageViewerPage: React.FC = () => {
     }
   };
 
-  // Simple subscription setup
+  // Load collage and setup realtime subscription
   useEffect(() => {
     if (code) {
-      console.log('🔥 VIEWER: Fetching collage:', code);
       fetchCollageByCode(code);
     }
     
     return () => {
-      console.log('🔥 VIEWER: Cleaning up subscription');
       cleanupRealtimeSubscription();
     };
   }, [code, fetchCollageByCode, cleanupRealtimeSubscription]);
 
-  // Manual refresh for debugging
+  // Manual refresh for when realtime fails
   const handleManualRefresh = useCallback(async () => {
     if (currentCollage?.id) {
-      console.log('🔄 Manual refresh triggered');
       await refreshPhotos(currentCollage.id);
     }
   }, [currentCollage?.id, refreshPhotos]);
@@ -110,6 +90,33 @@ const CollageViewerPage: React.FC = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Hide/show controls on mouse movement in fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    let hideTimeout: NodeJS.Timeout;
+    
+    const handleMouseMove = () => {
+      setControlsVisible(true);
+      clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(() => setControlsVisible(false), 3000);
+    };
+
+    const handleMouseLeave = () => {
+      clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(() => setControlsVisible(false), 1000);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      clearTimeout(hideTimeout);
+    };
+  }, [isFullscreen]);
 
   if (loading && !currentCollage) {
     return (
@@ -148,40 +155,18 @@ const CollageViewerPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Live Debug Panel - Direct Store Connection */}
-      <div className="fixed top-4 right-4 z-50 bg-red-900/80 text-white p-3 rounded-lg text-xs max-w-sm">
-        <h3 className="font-bold mb-1">LIVE STORE DEBUG:</h3>
-        <p>Store Photos: {useCollageStore.getState().photos?.length || 0}</p>
-        <p>Prop Photos: {safePhotos.length}</p>
-        <p>Realtime: {isRealtimeConnected ? '✅ Connected' : '⚠️ Polling'}</p>
-        <p>Last Update: {new Date(useCollageStore.getState().lastRefreshTime).toLocaleTimeString()}</p>
-        <p>Photo IDs: {(useCollageStore.getState().photos || []).map(p => p.id.slice(-4)).join(', ')}</p>
-        <button 
-          onClick={handleManualRefresh}
-          className="mt-1 px-2 py-1 bg-blue-600 rounded text-xs"
-        >
-          Refresh
-        </button>
-        <button 
-          onClick={() => console.log('LIVE STORE PHOTOS:', useCollageStore.getState().photos)}
-          className="mt-1 ml-1 px-2 py-1 bg-green-600 rounded text-xs"
-        >
-          Log Store
-        </button>
-      </div>
-
-      {/* Main Scene - FIXED: CollageScene now gets photos directly from store */}
+      {/* Main Scene */}
       <div className="relative w-full h-screen">
         <ErrorBoundary 
           FallbackComponent={SceneErrorFallback}
-          resetKeys={[currentCollage.id, safePhotos.length]} // Keep for error boundary
+          resetKeys={[currentCollage.id, safePhotos.length]}
         >
           <CollageScene 
             photos={safePhotos}
             settings={currentCollage.settings}
             onSettingsChange={(newSettings) => {
               // Optional: Handle settings changes from the viewer
-              console.log('🎛️ Settings changed from viewer:', newSettings);
+              console.log('Settings changed from viewer:', newSettings);
             }}
           />
         </ErrorBoundary>
@@ -258,8 +243,7 @@ const CollageViewerPage: React.FC = () => {
               <PhotoUploader
                 collageId={currentCollage.id}
                 onUploadComplete={() => {
-                  console.log('📸 Upload completed in viewer - photos will appear automatically via realtime');
-                  // Don't close modal automatically, let user upload multiple
+                  // Photos will appear automatically via realtime
                 }}
               />
             </div>
@@ -275,18 +259,6 @@ const CollageViewerPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Mouse movement handler for fullscreen */}
-      {isFullscreen && (
-        <div
-          className="fixed inset-0 z-0"
-          onMouseMove={() => {
-            setControlsVisible(true);
-            const timer = setTimeout(() => setControlsVisible(false), 3000);
-            return () => clearTimeout(timer);
-          }}
-        />
-      )}
     </div>
   );
 };

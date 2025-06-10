@@ -1,4 +1,4 @@
-// src/components/three/CollageScene.tsx - FIXED: Stable rendering during uploads
+// src/components/three/CollageScene.tsx - COMPLETE FIX: Floor, Grid, Controls, and Stable Rendering
 import React, { useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
@@ -38,7 +38,6 @@ class SlotManager {
   private occupiedSlots = new Set<number>();
   private availableSlots: number[] = [];
   private totalSlots = 0;
-  private lastAssignmentSnapshot = new Map<string, number>();
 
   constructor(totalSlots: number) {
     this.updateSlotCount(totalSlots);
@@ -72,7 +71,7 @@ class SlotManager {
 
   // CRITICAL FIX: Only assign new slots to new photos, preserve existing assignments
   assignSlots(photos: Photo[]): Map<string, number> {
-    const safePhotos = Array.isArray(photos) ? photos : [];
+    const safePhotos = Array.isArray(photos) ? photos.filter(p => p && p.id) : [];
     
     // Remove assignments for photos that no longer exist
     const currentPhotoIds = new Set(safePhotos.map(p => p.id));
@@ -86,8 +85,16 @@ class SlotManager {
     // Rebuild available slots after cleanup
     this.rebuildAvailableSlots();
 
+    // Sort photos for consistent assignment order
+    const sortedPhotos = [...safePhotos].sort((a, b) => {
+      if (a.created_at && b.created_at) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return a.id.localeCompare(b.id);
+    });
+
     // ONLY assign slots to NEW photos that don't have assignments yet
-    for (const photo of safePhotos) {
+    for (const photo of sortedPhotos) {
       if (!this.slotAssignments.has(photo.id) && this.availableSlots.length > 0) {
         const newSlot = this.availableSlots.shift()!;
         this.slotAssignments.set(photo.id, newSlot);
@@ -99,16 +106,133 @@ class SlotManager {
   }
 }
 
-// Controls component
-const Controls: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
-  const controlsRef = useRef<any>();
+// Floor component
+const Floor: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
+  if (!settings.floorEnabled) return null;
 
-  return settings.controlsEnabled ? (
+  const floorMaterial = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: settings.floorColor || '#1a1a2e',
+      transparent: (settings.floorOpacity || 1) < 1,
+      opacity: settings.floorOpacity || 1,
+      metalness: Math.min(settings.floorMetalness || 0.5, 0.9),
+      roughness: Math.max(settings.floorRoughness || 0.5, 0.1),
+      side: THREE.DoubleSide,
+      envMapIntensity: 0.5,
+    });
+  }, [settings.floorColor, settings.floorOpacity, settings.floorMetalness, settings.floorRoughness]);
+
+  return (
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, -10, 0]}
+      receiveShadow
+    >
+      <planeGeometry args={[settings.floorSize || 100, settings.floorSize || 100, 32, 32]} />
+      <primitive object={floorMaterial} attach="material" />
+    </mesh>
+  );
+};
+
+// Grid component
+const Grid: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
+  if (!settings.gridEnabled) return null;
+
+  const gridHelper = useMemo(() => {
+    const helper = new THREE.GridHelper(
+      settings.gridSize || 100,
+      settings.gridDivisions || 20,
+      settings.gridColor || '#ffffff',
+      settings.gridColor || '#ffffff'
+    );
+    
+    const material = helper.material as THREE.LineBasicMaterial;
+    material.transparent = true;
+    material.opacity = Math.min(settings.gridOpacity || 0.3, 0.8);
+    material.color = new THREE.Color(settings.gridColor || '#ffffff');
+    
+    helper.position.y = -9.99; // Just above the floor
+    
+    return helper;
+  }, [settings.gridSize, settings.gridDivisions, settings.gridColor, settings.gridOpacity]);
+
+  return <primitive object={gridHelper} />;
+};
+
+// CameraController component with FIXED controls
+const CameraController: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
+  const { camera } = useThree();
+  const controlsRef = useRef<any>();
+  const userInteractingRef = useRef(false);
+  const lastInteractionTimeRef = useRef(0);
+  
+  // Initialize camera position
+  useEffect(() => {
+    if (camera && controlsRef.current) {
+      const initialDistance = settings.cameraDistance || 20;
+      const initialHeight = settings.cameraHeight || 0;
+      const initialPosition = new THREE.Vector3(
+        initialDistance,
+        initialHeight,
+        initialDistance
+      );
+      camera.position.copy(initialPosition);
+      
+      const target = new THREE.Vector3(0, initialHeight * 0.3, 0);
+      controlsRef.current.target.copy(target);
+      controlsRef.current.update();
+    }
+  }, [camera, settings.cameraDistance, settings.cameraHeight]);
+
+  // Handle user interaction detection
+  useEffect(() => {
+    if (!controlsRef.current) return;
+
+    const handleStart = () => {
+      userInteractingRef.current = true;
+      lastInteractionTimeRef.current = Date.now();
+    };
+
+    const handleEnd = () => {
+      lastInteractionTimeRef.current = Date.now();
+      setTimeout(() => {
+        userInteractingRef.current = false;
+      }, 500);
+    };
+
+    const controls = controlsRef.current;
+    controls.addEventListener('start', handleStart);
+    controls.addEventListener('end', handleEnd);
+
+    return () => {
+      controls.removeEventListener('start', handleStart);
+      controls.removeEventListener('end', handleEnd);
+    };
+  }, []);
+
+  // Auto rotation when enabled
+  useFrame((state, delta) => {
+    if (!controlsRef.current) return;
+
+    if (settings.cameraRotationEnabled && !userInteractingRef.current) {
+      const offset = new THREE.Vector3().copy(camera.position).sub(controlsRef.current.target);
+      const spherical = new THREE.Spherical().setFromVector3(offset);
+      
+      spherical.theta += (settings.cameraRotationSpeed || 0.5) * delta;
+      
+      const newPosition = new THREE.Vector3().setFromSpherical(spherical).add(controlsRef.current.target);
+      camera.position.copy(newPosition);
+      controlsRef.current.update();
+    }
+  });
+
+  // ALWAYS return controls - they should be enabled by default
+  return (
     <OrbitControls
       ref={controlsRef}
-      enablePan={true}
-      enableZoom={true}
-      enableRotate={true}
+      enablePan={settings.controlsEnabled !== false} // Default to true
+      enableZoom={settings.controlsEnabled !== false}
+      enableRotate={settings.controlsEnabled !== false}
       minDistance={5}
       maxDistance={200}
       minPolarAngle={Math.PI / 6}
@@ -116,7 +240,34 @@ const Controls: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
       enableDamping={true}
       dampingFactor={0.05}
     />
-  ) : null;
+  );
+};
+
+// Scene Lighting component
+const SceneLighting: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
+  return (
+    <>
+      <ambientLight 
+        intensity={settings.ambientLightIntensity || 0.4} 
+        color={settings.ambientLightColor || '#ffffff'} 
+      />
+      
+      <pointLight 
+        position={[10, 10, 10]} 
+        intensity={settings.pointLightIntensity || 0.8}
+        color={settings.pointLightColor || '#ffffff'}
+        castShadow={settings.shadowsEnabled}
+        shadow-mapSize={[1024, 1024]}
+      />
+      
+      <directionalLight
+        position={[5, 10, 5]}
+        intensity={0.5}
+        color="#ffffff"
+        castShadow={settings.shadowsEnabled}
+      />
+    </>
+  );
 };
 
 // CRITICAL FIX: Animation Controller with stable updates
@@ -125,8 +276,8 @@ const AnimationController: React.FC<{
   photos: Photo[];
   onPositionsUpdate: (photos: PhotoWithPosition[]) => void;
 }> = ({ settings, photos, onPositionsUpdate }) => {
-  const slotManagerRef = useRef(new SlotManager(settings.photoCount));
-  const lastPhotoCount = useRef(settings.photoCount);
+  const slotManagerRef = useRef(new SlotManager(settings.photoCount || 100));
+  const lastPhotoCount = useRef(settings.photoCount || 100);
   const lastPositionsRef = useRef<PhotoWithPosition[]>([]);
   
   const currentPhotoIds = useMemo(() => 
@@ -138,72 +289,96 @@ const AnimationController: React.FC<{
   const animationFrameRef = useRef<number>();
   
   const updatePositions = useCallback((time: number = 0) => {
-    const safePhotos = Array.isArray(photos) ? photos : [];
+    try {
+      const safePhotos = Array.isArray(photos) ? photos.filter(p => p && p.id) : [];
+      const safeSettings = settings || {};
 
-    // Get STABLE slot assignments - only new photos get new slots
-    const slotAssignments = slotManagerRef.current.assignSlots(safePhotos);
-    
-    // Generate pattern positions
-    const pattern = PatternFactory.createPattern(settings.animationPattern || 'grid', settings, safePhotos);
-    const patternState = pattern.generatePositions(time);
-    
-    const photosWithPositions: PhotoWithPosition[] = [];
-    
-    // CRITICAL: Preserve existing photo positions, only add new photos to new slots
-    for (const photo of safePhotos) {
-      const slotIndex = slotAssignments.get(photo.id);
-      if (slotIndex !== undefined && slotIndex < (settings.photoCount || 50)) {
-        photosWithPositions.push({
-          ...photo,
-          targetPosition: patternState.positions[slotIndex] || [0, 0, 0],
-          targetRotation: patternState.rotations?.[slotIndex] || [0, 0, 0],
-          displayIndex: slotIndex,
-          slotIndex,
-        });
+      // Get STABLE slot assignments - only new photos get new slots
+      const slotAssignments = slotManagerRef.current.assignSlots(safePhotos);
+      
+      // Generate pattern positions with error handling
+      let patternState;
+      try {
+        const pattern = PatternFactory.createPattern(
+          safeSettings.animationPattern || 'grid', 
+          safeSettings, 
+          safePhotos
+        );
+        patternState = pattern.generatePositions(time);
+      } catch (error) {
+        console.error('Pattern generation error:', error);
+        // Fallback to simple grid
+        const positions = [];
+        const rotations = [];
+        for (let i = 0; i < (safeSettings.photoCount || 100); i++) {
+          const x = (i % 10) * 5 - 25;
+          const z = Math.floor(i / 10) * 5 - 25;
+          positions.push([x, 0, z]);
+          rotations.push([0, 0, 0]);
+        }
+        patternState = { positions, rotations };
       }
-    }
-    
-    // Add empty slots for remaining positions - STABLE ORDER
-    for (let i = 0; i < (settings.photoCount || 50); i++) {
-      const hasPhoto = photosWithPositions.some(p => p.slotIndex === i);
-      if (!hasPhoto) {
-        photosWithPositions.push({
-          id: `placeholder-${i}`, // Stable ID for empty slots
-          url: '',
-          targetPosition: patternState.positions[i] || [0, 0, 0],
-          targetRotation: patternState.rotations?.[i] || [0, 0, 0],
-          displayIndex: i,
-          slotIndex: i,
-        });
+      
+      const photosWithPositions: PhotoWithPosition[] = [];
+      
+      // CRITICAL: Preserve existing photo positions, only add new photos to new slots
+      for (const photo of safePhotos) {
+        const slotIndex = slotAssignments.get(photo.id);
+        if (slotIndex !== undefined && slotIndex < (safeSettings.photoCount || 100)) {
+          photosWithPositions.push({
+            ...photo,
+            targetPosition: patternState.positions[slotIndex] || [0, 0, 0],
+            targetRotation: patternState.rotations?.[slotIndex] || [0, 0, 0],
+            displayIndex: slotIndex,
+            slotIndex,
+          });
+        }
       }
-    }
-    
-    // CRITICAL: Always sort by slot index for consistent order
-    photosWithPositions.sort((a, b) => a.slotIndex - b.slotIndex);
-    
-    // Only update if positions actually changed significantly
-    const positionsChanged = photosWithPositions.length !== lastPositionsRef.current.length ||
-      photosWithPositions.some((photo, index) => {
-        const lastPhoto = lastPositionsRef.current[index];
-        return !lastPhoto || 
-               lastPhoto.id !== photo.id ||
-               lastPhoto.targetPosition.some((pos, i) => Math.abs(pos - photo.targetPosition[i]) > 0.001);
-      });
+      
+      // Add empty slots for remaining positions - STABLE ORDER
+      for (let i = 0; i < (safeSettings.photoCount || 100); i++) {
+        const hasPhoto = photosWithPositions.some(p => p.slotIndex === i);
+        if (!hasPhoto) {
+          photosWithPositions.push({
+            id: `placeholder-${i}`, // Stable ID for empty slots
+            url: '',
+            targetPosition: patternState.positions[i] || [0, 0, 0],
+            targetRotation: patternState.rotations?.[i] || [0, 0, 0],
+            displayIndex: i,
+            slotIndex: i,
+          });
+        }
+      }
+      
+      // CRITICAL: Always sort by slot index for consistent order
+      photosWithPositions.sort((a, b) => a.slotIndex - b.slotIndex);
+      
+      // Only update if positions actually changed significantly
+      const positionsChanged = photosWithPositions.length !== lastPositionsRef.current.length ||
+        photosWithPositions.some((photo, index) => {
+          const lastPhoto = lastPositionsRef.current[index];
+          return !lastPhoto || 
+                 lastPhoto.id !== photo.id ||
+                 lastPhoto.targetPosition.some((pos, i) => Math.abs(pos - photo.targetPosition[i]) > 0.001);
+        });
 
-    if (positionsChanged) {
-      lastPositionsRef.current = photosWithPositions;
-      onPositionsUpdate(photosWithPositions);
+      if (positionsChanged) {
+        lastPositionsRef.current = photosWithPositions;
+        onPositionsUpdate(photosWithPositions);
+      }
+    } catch (error) {
+      console.error('Error in updatePositions:', error);
     }
   }, [photos, settings, onPositionsUpdate]);
 
   // CRITICAL FIX: Only update immediately for photo count changes, not photo additions
   useEffect(() => {
-    const photoCountChanged = settings.photoCount !== lastPhotoCount.current;
+    const photoCountChanged = (settings.photoCount || 100) !== lastPhotoCount.current;
     
     if (photoCountChanged) {
       console.log('📊 PHOTO COUNT CHANGED: Force update');
-      slotManagerRef.current.updateSlotCount(settings.photoCount);
-      lastPhotoCount.current = settings.photoCount;
+      slotManagerRef.current.updateSlotCount(settings.photoCount || 100);
+      lastPhotoCount.current = settings.photoCount || 100;
       updatePositions(0);
     }
   }, [settings.photoCount, updatePositions]);
@@ -232,7 +407,7 @@ const AnimationController: React.FC<{
   // Regular animation updates
   useFrame((state) => {
     const time = settings.animationEnabled ? 
-      state.clock.elapsedTime * (settings.animationSpeed / 50) : 0;
+      state.clock.elapsedTime * ((settings.animationSpeed || 50) / 50) : 0;
     
     updatePositions(time);
   });
@@ -373,7 +548,7 @@ const DynamicLightingSystem: React.FC<{ settings: SceneSettings }> = ({ settings
   );
 };
 
-// ENHANCED: PhotoMesh with stable key and reduced re-renders
+// ENHANCED: PhotoMesh with FIXED empty slot color
 const PhotoMesh: React.FC<{
   photo: PhotoWithPosition;
   size: number;
@@ -481,6 +656,7 @@ const PhotoMesh: React.FC<{
     }
   });
 
+  // FIXED: Material with correct empty slot color handling
   const material = useMemo(() => {
     if (texture) {
       const brightnessMaterial = new THREE.MeshStandardMaterial({
@@ -495,17 +671,17 @@ const PhotoMesh: React.FC<{
       
       return brightnessMaterial;
     } else {
-      // Empty slot material - NOT affected by brightness setting
+      // FIXED: Empty slot material using EXACT emptySlotColor setting
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 512;
       const ctx = canvas.getContext('2d')!;
       
-      // Fill with background color
-      ctx.fillStyle = emptySlotColor || '#1A1A1A';
+      // Use EXACT empty slot color from settings
+      ctx.fillStyle = emptySlotColor;
       ctx.fillRect(0, 0, 512, 512);
       
-      // Add pattern
+      // Add pattern overlay
       if (pattern === 'grid') {
         ctx.strokeStyle = '#ffffff20';
         ctx.lineWidth = 2;
@@ -527,7 +703,7 @@ const PhotoMesh: React.FC<{
         transparent: false,
         opacity: 1.0, // Fully opaque empty slots
         side: THREE.DoubleSide,
-        color: 0xffffff, // Fixed white color for empty slots, not affected by brightness
+        color: 0xffffff, // White base - texture carries the color
       });
     }
   }, [texture, emptySlotColor, pattern, brightness]);
@@ -539,7 +715,6 @@ const PhotoMesh: React.FC<{
       castShadow
       receiveShadow
     >
-      {/* Add a very slight bevel to the plane for better light response */}
       <planeGeometry args={[(size || 4.0) * (9/16), size || 4.0]} />
     </mesh>
   );
@@ -558,34 +733,6 @@ const PhotoMesh: React.FC<{
   );
 });
 
-// Floor component
-const Floor: React.FC<{ settings: SceneSettings }> = ({ settings }) => {
-  if (!settings.floorEnabled) return null;
-
-  const floorMaterial = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: settings.floorColor,
-      transparent: settings.floorOpacity < 1,
-      opacity: settings.floorOpacity,
-      metalness: Math.min(settings.floorMetalness || 0.5, 0.9),
-      roughness: Math.max(settings.floorRoughness || 0.5, 0.1),
-      side: THREE.DoubleSide,
-      envMapIntensity: 0.5,
-    });
-  }, [settings.floorColor, settings.floorOpacity, settings.floorMetalness, settings.floorRoughness]);
-
-  return (
-    <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, -10, 0]}
-      receiveShadow
-    >
-      <planeGeometry args={[100, 100]} />
-      <primitive object={floorMaterial} attach="material" />
-    </mesh>
-  );
-};
-
 // Photo renderer with stable keys
 const PhotoRenderer: React.FC<{ 
   photosWithPositions: PhotoWithPosition[]; 
@@ -599,8 +746,8 @@ const PhotoRenderer: React.FC<{
         <PhotoMesh
           key={`${photo.id}-${photo.slotIndex}`} // CRITICAL: Stable key combining ID and slot
           photo={photo}
-          size={settings.photoSize || 3}
-          emptySlotColor={settings.emptySlotColor || '#333333'}
+          size={settings.photoSize || 4.0}
+          emptySlotColor={settings.emptySlotColor || '#1A1A1A'}
           pattern={settings.animationPattern || 'grid'}
           shouldFaceCamera={shouldFaceCamera}
           brightness={settings.photoBrightness || 1.0}
@@ -610,6 +757,17 @@ const PhotoRenderer: React.FC<{
   );
 };
 
+// Debug component to track photo changes
+const PhotoDebugger: React.FC<{ photos: Photo[] }> = ({ photos }) => {
+  useEffect(() => {
+    console.log('🔍 PHOTO DEBUGGER: Photos updated in scene');
+    console.log('🔍 Count:', photos?.length || 0);
+    console.log('🔍 IDs:', (photos || []).map(p => p.id.slice(-4)));
+  }, [photos]);
+  
+  return null;
+};
+
 // Main CollageScene component
 const CollageScene: React.FC<CollageSceneProps> = ({ photos, settings, onSettingsChange }) => {
   const [photosWithPositions, setPhotosWithPositions] = useState<PhotoWithPosition[]>([]);
@@ -617,14 +775,33 @@ const CollageScene: React.FC<CollageSceneProps> = ({ photos, settings, onSetting
   const safePhotos = Array.isArray(photos) ? photos : [];
   const safeSettings = { ...settings };
 
+  // Background style for gradient backgrounds
+  const backgroundStyle = useMemo(() => {
+    if (safeSettings.backgroundGradient) {
+      return {
+        background: `linear-gradient(${safeSettings.backgroundGradientAngle || 45}deg, ${safeSettings.backgroundGradientStart || '#000000'}, ${safeSettings.backgroundGradientEnd || '#000000'})`
+      };
+    }
+    return {
+      background: safeSettings.backgroundColor || '#000000'
+    };
+  }, [
+    safeSettings.backgroundGradient,
+    safeSettings.backgroundColor,
+    safeSettings.backgroundGradientStart,
+    safeSettings.backgroundGradientEnd,
+    safeSettings.backgroundGradientAngle
+  ]);
+
   console.log('🎬 COLLAGE SCENE RENDER:', {
     photoCount: safePhotos.length,
     settingsPhotoCount: safeSettings.photoCount,
-    positionsCount: photosWithPositions.length
+    positionsCount: photosWithPositions.length,
+    emptySlotColor: safeSettings.emptySlotColor
   });
 
   return (
-    <div className="w-full h-full relative">
+    <div style={backgroundStyle} className="w-full h-full">
       <Canvas
         shadows={safeSettings.shadowsEnabled}
         camera={{ 
@@ -637,15 +814,27 @@ const CollageScene: React.FC<CollageSceneProps> = ({ photos, settings, onSetting
           antialias: true, 
           alpha: safeSettings.backgroundGradient || false,
           powerPreference: "high-performance",
-          preserveDrawingBuffer: true
+          preserveDrawingBuffer: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.0,
         }}
         onCreated={(state) => {
           if (safeSettings.backgroundGradient) {
             state.gl.setClearColor('#000000', 0);
           }
+          state.gl.shadowMap.enabled = true;
+          state.gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          state.gl.shadowMap.autoUpdate = true;
+          state.gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         }}
+        performance={{ min: 0.8 }}
+        linear={true}
       >
         <BackgroundRenderer settings={safeSettings} />
+        <CameraController settings={safeSettings} />
+        <SceneLighting settings={safeSettings} />
+        <Floor settings={safeSettings} />
+        <Grid settings={safeSettings} />
         
         <AnimationController
           settings={safeSettings}
@@ -653,29 +842,14 @@ const CollageScene: React.FC<CollageSceneProps> = ({ photos, settings, onSetting
           onPositionsUpdate={setPhotosWithPositions}
         />
         
+        <PhotoDebugger photos={safePhotos} />
+        
         <PhotoRenderer 
           photosWithPositions={photosWithPositions}
           settings={safeSettings}
         />
         
-        <Floor settings={safeSettings} />
-        
-        <ambientLight 
-          intensity={safeSettings.ambientLightIntensity || 0.4} 
-          color={safeSettings.ambientLightColor || '#ffffff'} 
-        />
-        
-        <pointLight 
-          position={[10, 10, 10]} 
-          intensity={safeSettings.pointLightIntensity || 0.8}
-          color={safeSettings.pointLightColor || '#ffffff'}
-          castShadow={safeSettings.shadowsEnabled}
-          shadow-mapSize={[1024, 1024]}
-        />
-        
         <DynamicLightingSystem settings={safeSettings} />
-        
-        <Controls settings={safeSettings} />
       </Canvas>
     </div>
   );

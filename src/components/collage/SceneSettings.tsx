@@ -88,7 +88,7 @@ const SceneSettings: React.FC<{
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <label className="text-sm text-gray-300">
-              Photos Follow Camera
+              Photos Always Face Camera
             </label>
             <input
               type="checkbox"
@@ -100,7 +100,10 @@ const SceneSettings: React.FC<{
             />
           </div>
           <p className="text-xs text-gray-400">
-            When enabled, photos always face the camera for better visibility
+            {settings.animationPattern === 'grid' 
+              ? "Grid Wall: Turn OFF for traditional flat wall, turn ON for billboard effect" 
+              : "When enabled, photos rotate to always face the camera for better visibility"
+            }
           </p>
         </div>
       </div>
@@ -677,11 +680,21 @@ const SceneSettings: React.FC<{
               Global scene brightness (0% = pitch black, 1000% = very bright)
             </p>
           </div>
+        </div>
+      </div>
 
+      {/* Spotlight Settings */}
+      <div>
+        <h4 className="flex items-center text-sm font-medium text-gray-200 mb-3">
+          <Sun className="h-4 w-4 mr-2" />
+          Spotlights
+        </h4>
+        
+        <div className="space-y-4">
           <div className="bg-gray-800 p-3 rounded">
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-400">Spotlight Color</label>
+                <label className="block text-sm text-gray-300 mb-2">Spotlight Color</label>
                 <input
                   type="color"
                   value={settings.spotlightColor}
@@ -693,9 +706,9 @@ const SceneSettings: React.FC<{
               </div>
               
               <div>
-                <label className="block text-xs text-gray-400">
+                <label className="block text-sm text-gray-300 mb-2">
                   Number of Spotlights
-                  <span className="ml-2">{settings.spotlightCount}</span>
+                  <span className="ml-2 text-xs text-gray-400">{settings.spotlightCount}</span>
                 </label>
                 <input
                   type="range"
@@ -710,6 +723,114 @@ const SceneSettings: React.FC<{
                 />
               </div>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">
+              Spotlight Height
+              <span className="ml-2 text-xs text-gray-400">{settings.spotlightHeight} units</span>
+            </label>
+            <input
+              type="range"
+              min="5"
+              max="50"
+              step="1"
+              value={settings.spotlightHeight}
+              onChange={(e) => onSettingsChange({ 
+                spotlightHeight: parseFloat(e.target.value) 
+              }, true)}
+              className="w-full bg-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">
+              Spotlight Distance
+              <span className="ml-2 text-xs text-gray-400">{settings.spotlightDistance} units</span>
+            </label>
+            <input
+              type="range"
+              min="10"
+              max="100"
+              step="5"
+              value={settings.spotlightDistance}
+              onChange={(e) => onSettingsChange({ 
+                spotlightDistance: parseFloat(e.target.value) 
+              }, true)}
+              className="w-full bg-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">
+              Spotlight Width
+              <span className="ml-2 text-xs text-gray-400">{settings.spotlightWidth.toFixed(1)}</span>
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.1"
+              value={settings.spotlightWidth}
+              onChange={(e) => onSettingsChange({ 
+                spotlightWidth: parseFloat(e.target.value) 
+              }, true)}
+              className="w-full bg-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">
+              Spotlight Intensity
+              <span className="ml-2 text-xs text-gray-400">{settings.spotlightIntensity.toFixed(0)}%</span>
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="200"
+              step="1"
+              value={settings.spotlightIntensity}
+              onChange={(e) => onSettingsChange({ 
+                spotlightIntensity: parseFloat(e.target.value) 
+              }, true)}
+              className="w-full bg-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">
+              Spotlight Tilt
+              <span className="ml-2 text-xs text-gray-400">{settings.spotlightAngle.toFixed(1)}</span>
+            </label>
+            <input
+              type="range"
+              min="-1.5"
+              max="1.5"
+              step="0.1"
+              value={settings.spotlightAngle}
+              onChange={(e) => onSettingsChange({ 
+                spotlightAngle: parseFloat(e.target.value) 
+              }, true)}
+              className="w-full bg-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">
+              Spotlight Softness
+              <span className="ml-2 text-xs text-gray-400">{settings.spotlightPenumbra.toFixed(1)}</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={settings.spotlightPenumbra}
+              onChange={(e) => onSettingsChange({ 
+                spotlightPenumbra: parseFloat(e.target.value) 
+              }, true)}
+              className="w-full bg-gray-800"
+            />
           </div>
         </div>
       </div>

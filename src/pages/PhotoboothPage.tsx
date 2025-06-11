@@ -93,7 +93,7 @@ const PhotoboothPage: React.FC = () => {
       
       console.log('📱 Platform detected:', { isIOS, isAndroid, isMobile });
       
-      // Build constraints based on platform - prefer portrait for mobile
+      // Build constraints based on platform - maintain natural aspect ratio
       let constraints: MediaStreamConstraints;
       
       if (deviceId) {
@@ -101,9 +101,9 @@ const PhotoboothPage: React.FC = () => {
           video: {
             deviceId: { exact: deviceId },
             facingMode: "user",
-            // Portrait-oriented constraints for better selfie experience
-            width: isMobile ? { ideal: 720, max: 1080 } : { ideal: 720, max: 1280 },
-            height: isMobile ? { ideal: 1280, max: 1920 } : { ideal: 1280, max: 1920 }
+            // Don't force specific dimensions - let camera use natural resolution
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           },
           audio: false
         };
@@ -111,9 +111,9 @@ const PhotoboothPage: React.FC = () => {
         constraints = {
           video: {
             facingMode: "user",
-            // Portrait-oriented constraints
-            width: isMobile ? { ideal: 720, max: 1080 } : { ideal: 720, max: 1280 },
-            height: isMobile ? { ideal: 1280, max: 1920 } : { ideal: 1280, max: 1920 }
+            // Use natural camera resolution
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           },
           audio: false
         };
@@ -294,13 +294,40 @@ const PhotoboothPage: React.FC = () => {
 
     if (!context) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Use the video's natural dimensions to avoid distortion
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    
+    // Calculate portrait dimensions (9:16 aspect ratio)
+    let captureWidth, captureHeight;
+    const targetAspectRatio = 9 / 16;
+    const videoAspectRatio = videoWidth / videoHeight;
+    
+    if (videoAspectRatio > targetAspectRatio) {
+      // Video is wider than target, crop width
+      captureHeight = videoHeight;
+      captureWidth = videoHeight * targetAspectRatio;
+    } else {
+      // Video is taller than target, crop height  
+      captureWidth = videoWidth;
+      captureHeight = videoWidth / targetAspectRatio;
+    }
+    
+    // Center the crop
+    const startX = (videoWidth - captureWidth) / 2;
+    const startY = (videoHeight - captureHeight) / 2;
 
-    // Draw the video frame - handle mirroring
+    canvas.width = captureWidth;
+    canvas.height = captureHeight;
+
+    // Draw the video frame - handle mirroring and cropping
     context.save();
     context.scale(-1, 1); // Mirror horizontally
-    context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    context.drawImage(
+      video, 
+      startX, startY, captureWidth, captureHeight, // Source crop
+      -captureWidth, 0, captureWidth, captureHeight // Destination (mirrored)
+    );
     context.restore();
 
     // Add text overlay if provided
@@ -500,81 +527,85 @@ const PhotoboothPage: React.FC = () => {
             {/* Camera/Photo Container */}
             <div className="relative bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
               {photo ? (
-                /* Photo Preview with Glassmorphic Text Input */
-                <div className="relative">
-                  <img 
-                    src={photo} 
-                    alt="Captured photo" 
-                    className="w-full h-auto max-w-xs lg:max-w-sm max-h-[60vh] object-contain"
-                  />
-                  
-                  {/* Text Overlay on Photo Preview - Lower Third */}
-                  {text.trim() && (
-                    <div className="absolute bottom-[15%] left-4 right-4 pointer-events-none">
-                      <div 
-                        className="text-white font-bold text-center px-3 py-2 bg-black/70 backdrop-blur-sm rounded-lg mx-auto border border-white/20"
-                        style={{ 
-                          fontSize: 'clamp(0.875rem, 3vw, 1.25rem)',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
-                          lineHeight: '1.2',
-                          maxWidth: '90%',
-                          wordWrap: 'break-word',
-                          whiteSpace: 'pre-wrap'
-                        }}
-                      >
-                        {text}
+                /* Photo Preview with Glassmorphic Text Input - Portrait */}
+                <div className="relative max-w-xs lg:max-w-sm mx-auto">
+                  <div 
+                    className="relative bg-gray-800 rounded-lg overflow-hidden"
+                    style={{ aspectRatio: '9/16' }}
+                  >
+                    <img 
+                      src={photo} 
+                      alt="Captured photo" 
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Text Overlay on Photo Preview - Lower Third */}
+                    {text.trim() && (
+                      <div className="absolute bottom-[15%] left-4 right-4 pointer-events-none">
+                        <div 
+                          className="text-white font-bold text-center px-3 py-2 bg-black/70 backdrop-blur-sm rounded-lg mx-auto border border-white/20"
+                          style={{ 
+                            fontSize: 'clamp(0.875rem, 3vw, 1.25rem)',
+                            textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
+                            lineHeight: '1.2',
+                            maxWidth: '90%',
+                            wordWrap: 'break-word',
+                            whiteSpace: 'pre-wrap'
+                          }}
+                        >
+                          {text}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Glassmorphic Text Input Overlay - On Photo Preview */}
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="bg-black/30 backdrop-blur-md rounded-xl border border-white/20 p-3 shadow-2xl">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Type className="w-3 h-3 text-white/80" />
-                        <span className="text-xs font-medium text-white/90">Add Text to Photo</span>
-                      </div>
-                      
-                      <textarea
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        placeholder="Type your message..."
-                        className="w-full h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-xs text-white placeholder-white/60 resize-none focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all leading-tight"
-                        maxLength={80}
-                        rows={2}
-                      />
-                      
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-white/70">
-                          {text.length}/80
-                        </span>
-                        {text && (
-                          <button
-                            onClick={() => setText('')}
-                            className="text-xs text-red-300 hover:text-red-200 transition-colors px-2 py-1 hover:bg-red-500/20 rounded"
-                          >
-                            Clear
-                          </button>
-                        )}
+                    {/* Glassmorphic Text Input Overlay - On Photo Preview */}
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <div className="bg-black/30 backdrop-blur-md rounded-xl border border-white/20 p-3 shadow-2xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Type className="w-3 h-3 text-white/80" />
+                          <span className="text-xs font-medium text-white/90">Add Text to Photo</span>
+                        </div>
+                        
+                        <textarea
+                          value={text}
+                          onChange={(e) => setText(e.target.value)}
+                          placeholder="Type your message..."
+                          className="w-full h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-xs text-white placeholder-white/60 resize-none focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all leading-tight"
+                          maxLength={80}
+                          rows={2}
+                        />
+                        
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-xs text-white/70">
+                            {text.length}/80
+                          </span>
+                          {text && (
+                            <button
+                              onClick={() => setText('')}
+                              className="text-xs text-red-300 hover:text-red-200 transition-colors px-2 py-1 hover:bg-red-500/20 rounded"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                /* Camera View - Portrait Cropped */
+                /* Camera View - Portrait Container with Natural Video */
                 <div 
-                  className="relative bg-gray-800 w-80 lg:w-96 mx-auto overflow-hidden" 
+                  className="relative bg-gray-800 w-80 lg:w-96 mx-auto overflow-hidden rounded-lg" 
                   style={{ aspectRatio: '9/16' }}
                 >
-                  {/* Video Element - Cropped to Portrait */}
+                  {/* Video Element - Natural aspect ratio, object-fit contains */}
                   <video
                     ref={videoRef}
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain bg-gray-800"
                     style={{ 
-                      objectPosition: 'center center',
                       transform: 'scaleX(-1)' // Mirror for selfie effect
                     }}
                   />

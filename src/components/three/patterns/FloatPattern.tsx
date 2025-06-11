@@ -1,4 +1,4 @@
-// src/components/three/patterns/FloatPattern.tsx - FIXED: Dynamic floor size distribution
+// src/components/three/patterns/FloatPattern.tsx - UPDATED: Higher float height for better teleport
 import { BasePattern, type PatternState, type Position } from './BasePattern';
 
 export class FloatPattern extends BasePattern {
@@ -64,11 +64,11 @@ export class FloatPattern extends BasePattern {
     // Get base positions that adapt to current floor size
     const basePositions = this.generateDynamicBasePositions(totalPhotos, floorSize);
     
-    // Animation parameters (these can change without affecting base positions)
+    // UPDATED: Animation parameters - extremely high float height for completely out-of-view teleport
     const riseSpeed = 8; // Units per second rising speed
-    const maxHeight = 60; // Maximum height before recycling
-    const startHeight = -20; // Start well below the floor
-    const cycleHeight = maxHeight - startHeight; // Total distance to travel
+    const maxHeight = 300; // MASSIVELY INCREASED: Way higher before recycling (was 60, then 150)
+    const startHeight = -40; // DEEPER: Start even deeper below the floor (was -20, then -30)
+    const cycleHeight = maxHeight - startHeight; // Total distance to travel (now 340 units!)
     
     const speed = this.settings.animationSpeed / 100;
     const animationTime = time * speed;

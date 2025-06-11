@@ -297,8 +297,11 @@ const PhotoboothPage: React.FC = () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Draw the video frame
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Draw the video frame - handle mirroring
+    context.save();
+    context.scale(-1, 1); // Mirror horizontally
+    context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    context.restore();
 
     // Add text overlay if provided
     if (text.trim()) {
@@ -337,10 +340,10 @@ const PhotoboothPage: React.FC = () => {
       }
       lines.push(currentLine);
 
-      // Draw text in lower third position (matching preview)
+      // Draw text in lower third position (matching preview and final photo)
       const lineHeight = fontSize * 1.2;
       const totalHeight = lines.length * lineHeight;
-      const textY = canvas.height - 120 - (totalHeight / 2); // Position in lower third
+      const textY = canvas.height - 120 - (totalHeight / 2); // Position in lower third to match preview
       const textX = canvas.width / 2;
 
       lines.forEach((line, index) => {
@@ -497,27 +500,83 @@ const PhotoboothPage: React.FC = () => {
             {/* Camera/Photo Container */}
             <div className="relative bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
               {photo ? (
-                /* Photo Preview */
+                /* Photo Preview with Glassmorphic Text Input */
                 <div className="relative">
                   <img 
                     src={photo} 
                     alt="Captured photo" 
                     className="w-full h-auto max-w-xs lg:max-w-sm max-h-[60vh] object-contain"
                   />
+                  
+                  {/* Text Overlay on Photo Preview - Lower Third */}
+                  {text.trim() && (
+                    <div className="absolute bottom-[15%] left-4 right-4 pointer-events-none">
+                      <div 
+                        className="text-white font-bold text-center px-3 py-2 bg-black/70 backdrop-blur-sm rounded-lg mx-auto border border-white/20"
+                        style={{ 
+                          fontSize: 'clamp(0.875rem, 3vw, 1.25rem)',
+                          textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
+                          lineHeight: '1.2',
+                          maxWidth: '90%',
+                          wordWrap: 'break-word',
+                          whiteSpace: 'pre-wrap'
+                        }}
+                      >
+                        {text}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Glassmorphic Text Input Overlay - On Photo Preview */}
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="bg-black/30 backdrop-blur-md rounded-xl border border-white/20 p-3 shadow-2xl">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Type className="w-3 h-3 text-white/80" />
+                        <span className="text-xs font-medium text-white/90">Add Text to Photo</span>
+                      </div>
+                      
+                      <textarea
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        placeholder="Type your message..."
+                        className="w-full h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-xs text-white placeholder-white/60 resize-none focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all leading-tight"
+                        maxLength={80}
+                        rows={2}
+                      />
+                      
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-white/70">
+                          {text.length}/80
+                        </span>
+                        {text && (
+                          <button
+                            onClick={() => setText('')}
+                            className="text-xs text-red-300 hover:text-red-200 transition-colors px-2 py-1 hover:bg-red-500/20 rounded"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                /* Camera View - Portrait */
+                /* Camera View - Portrait Cropped */
                 <div 
-                  className="relative bg-gray-800 w-80 lg:w-96" 
+                  className="relative bg-gray-800 w-80 lg:w-96 mx-auto overflow-hidden" 
                   style={{ aspectRatio: '9/16' }}
                 >
-                  {/* Video Element */}
+                  {/* Video Element - Cropped to Portrait */}
                   <video
                     ref={videoRef}
                     autoPlay
                     playsInline
                     muted
                     className="w-full h-full object-cover"
+                    style={{ 
+                      objectPosition: 'center center',
+                      transform: 'scaleX(-1)' // Mirror for selfie effect
+                    }}
                   />
                   
                   {/* Camera State Overlay */}
@@ -558,60 +617,6 @@ const PhotoboothPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Glassmorphic Text Input Overlay - Lower Third */}
-                  {cameraState === 'active' && (
-                    <div className="absolute bottom-20 left-4 right-4">
-                      <div className="bg-black/30 backdrop-blur-md rounded-xl border border-white/20 p-3 shadow-2xl">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Type className="w-3 h-3 text-white/80" />
-                          <span className="text-xs font-medium text-white/90">Add Text</span>
-                        </div>
-                        
-                        <textarea
-                          value={text}
-                          onChange={(e) => setText(e.target.value)}
-                          placeholder="Type your message..."
-                          className="w-full h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-xs text-white placeholder-white/60 resize-none focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all leading-tight"
-                          maxLength={80}
-                          rows={2}
-                        />
-                        
-                        <div className="flex justify-between items-center mt-1">
-                          <span className="text-xs text-white/70">
-                            {text.length}/80
-                          </span>
-                          {text && (
-                            <button
-                              onClick={() => setText('')}
-                              className="text-xs text-red-300 hover:text-red-200 transition-colors px-2 py-1 hover:bg-red-500/20 rounded"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Text Preview Overlay - Lower Third */}
-                  {text.trim() && cameraState === 'active' && (
-                    <div className="absolute bottom-36 left-4 right-4 pointer-events-none">
-                      <div 
-                        className="text-white font-bold text-center px-3 py-2 bg-black/70 backdrop-blur-sm rounded-lg mx-auto border border-white/20"
-                        style={{ 
-                          fontSize: 'clamp(0.875rem, 3vw, 1.25rem)',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
-                          lineHeight: '1.2',
-                          maxWidth: '90%',
-                          wordWrap: 'break-word',
-                          whiteSpace: 'pre-wrap'
-                        }}
-                      >
-                        {text}
-                      </div>
-                    </div>
-                  )}
-                  
                   {/* Capture Button */}
                   {cameraState === 'active' && (
                     <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
@@ -629,17 +634,6 @@ const PhotoboothPage: React.FC = () => {
               {/* Hidden Canvas for Photo Processing */}
               <canvas ref={canvasRef} className="hidden" />
             </div>
-
-            {/* Text Input - Right below camera */}
-            {!photo && (
-              <div className="w-full max-w-xs lg:max-w-sm">
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-600">
-                  <p className="text-xs text-gray-400 text-center">
-                    💡 Use the text field on the camera preview to add your message
-                  </p>
-                </div>
-              </div>
-            )}
 
             {/* Photo Action Buttons */}
             {photo && (
@@ -724,11 +718,11 @@ const PhotoboothPage: React.FC = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2 font-bold">2.</span>
-                  Add optional text overlay below camera
+                  Click the big purple button to take photo
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2 font-bold">3.</span>
-                  Click the big purple button to take photo
+                  Add optional text overlay after taking photo
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2 font-bold">4.</span>

@@ -1,3 +1,4 @@
+// src/store/sceneStore.ts - Updated with larger default photo size
 import { create } from 'zustand';
 
 export type SceneSettings = {
@@ -110,9 +111,9 @@ const defaultSettings: SceneSettings = {
   gridSize: 200,
   gridDivisions: 30,
   gridOpacity: 1.0,
-  photoSize: 4.0,
+  photoSize: 6.0, // INCREASED: From 4.0 to 6.0 for better visibility in grid pattern
   photoRotation: true,
-  photoSpacing: 0,
+  photoSpacing: 0, // SOLID WALL: Default to edge-to-edge photos
   wallHeight: 0,
   gridAspectRatio: 1.77778,
   photoBrightness: 1.0, // 1.0 = natural photo brightness (100%)
@@ -188,6 +189,26 @@ export const useSceneStore = create<SceneState>()((set, get) => {
         newSettings.photoBrightness = brightness;
       } else {
         delete newSettings.photoBrightness;
+      }
+    }
+
+    // Handle photo size validation
+    if (newSettings.photoSize !== undefined) {
+      const size = Math.min(Math.max(1, Number(newSettings.photoSize)), 20);
+      if (!isNaN(size)) {
+        newSettings.photoSize = size;
+      } else {
+        delete newSettings.photoSize;
+      }
+    }
+
+    // Handle photo spacing validation
+    if (newSettings.photoSpacing !== undefined) {
+      const spacing = Math.min(Math.max(0, Number(newSettings.photoSpacing)), 1);
+      if (!isNaN(spacing)) {
+        newSettings.photoSpacing = spacing;
+      } else {
+        delete newSettings.photoSpacing;
       }
     }
 

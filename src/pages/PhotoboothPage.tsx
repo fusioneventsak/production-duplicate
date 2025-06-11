@@ -93,24 +93,28 @@ const PhotoboothPage: React.FC = () => {
       
       console.log('📱 Platform detected:', { isIOS, isAndroid, isMobile });
       
-      // Build constraints based on platform
+      // Build constraints based on platform - prefer portrait for mobile
       let constraints: MediaStreamConstraints;
       
       if (deviceId) {
         constraints = {
           video: {
             deviceId: { exact: deviceId },
-            ...(isMobile ? { facingMode: "user" } : {}),
-            ...(isIOS ? {
-              width: { ideal: 1280, max: 1920 },
-              height: { ideal: 720, max: 1080 }
-            } : {})
+            facingMode: "user",
+            // Portrait-oriented constraints for better selfie experience
+            width: isMobile ? { ideal: 720, max: 1080 } : { ideal: 720, max: 1280 },
+            height: isMobile ? { ideal: 1280, max: 1920 } : { ideal: 1280, max: 1920 }
           },
           audio: false
         };
       } else {
         constraints = {
-          video: isMobile ? { facingMode: "user" } : true,
+          video: {
+            facingMode: "user",
+            // Portrait-oriented constraints
+            width: isMobile ? { ideal: 720, max: 1080 } : { ideal: 720, max: 1280 },
+            height: isMobile ? { ideal: 1280, max: 1920 } : { ideal: 1280, max: 1920 }
+          },
           audio: false
         };
       }
@@ -298,33 +302,34 @@ const PhotoboothPage: React.FC = () => {
 
     // Add text overlay if provided
     if (text.trim()) {
-      const fontSize = Math.min(canvas.width, canvas.height) * 0.08;
+      const fontSize = Math.min(canvas.width, canvas.height) * 0.05; // Smaller font size
       context.font = `bold ${fontSize}px Arial`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       
       // Add shadow for better readability
-      context.shadowColor = 'rgba(0,0,0,0.8)';
-      context.shadowBlur = 4;
+      context.shadowColor = 'rgba(0,0,0,0.9)';
+      context.shadowBlur = 3;
       context.shadowOffsetX = 2;
       context.shadowOffsetY = 2;
       
       // White text with black outline
       context.strokeStyle = 'black';
-      context.lineWidth = fontSize * 0.1;
+      context.lineWidth = fontSize * 0.08;
       context.fillStyle = 'white';
       
-      // Split text into lines if too long
-      const maxWidth = canvas.width * 0.9;
+      // Split text into words and handle line breaks
+      const maxWidth = canvas.width * 0.85; // Slightly narrower
       const words = text.split(' ');
       const lines: string[] = [];
-      let currentLine = words[0];
+      let currentLine = words[0] || '';
 
       for (let i = 1; i < words.length; i++) {
         const word = words[i];
-        const width = context.measureText(currentLine + ' ' + word).width;
-        if (width < maxWidth) {
-          currentLine += ' ' + word;
+        const testLine = currentLine + ' ' + word;
+        const width = context.measureText(testLine).width;
+        if (width < maxWidth && lines.length < 1) { // Limit to 2 lines max
+          currentLine = testLine;
         } else {
           lines.push(currentLine);
           currentLine = word;
@@ -332,17 +337,16 @@ const PhotoboothPage: React.FC = () => {
       }
       lines.push(currentLine);
 
-      // Draw each line
+      // Draw text in lower third position (matching preview)
       const lineHeight = fontSize * 1.2;
       const totalHeight = lines.length * lineHeight;
-      const startY = (canvas.height - totalHeight) / 2 + fontSize / 2;
+      const textY = canvas.height - 120 - (totalHeight / 2); // Position in lower third
+      const textX = canvas.width / 2;
 
       lines.forEach((line, index) => {
-        const textY = startY + index * lineHeight;
-        const textX = canvas.width / 2;
-        
-        context.strokeText(line, textX, textY);
-        context.fillText(line, textX, textY);
+        const y = textY + (index * lineHeight);
+        context.strokeText(line, textX, y);
+        context.fillText(line, textX, y);
       });
       
       // Reset shadow
@@ -442,102 +446,71 @@ const PhotoboothPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
+      <div className="min-h-[calc(100vh-160px)] flex flex-col">
+        {/* Header - Compact */}
+        <div className="flex items-center justify-between p-4 lg:px-8 lg:py-6 border-b border-gray-800">
+          <div className="flex items-center space-x-3">
             <button
               onClick={() => navigate(`/collage/${currentCollage.code}`)}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-                <Camera className="w-6 h-6 text-purple-500" />
+              <h1 className="text-lg lg:text-xl font-bold text-white flex items-center space-x-2">
+                <Camera className="w-5 h-5 text-purple-500" />
                 <span>Photobooth</span>
               </h1>
-              <p className="text-gray-400">{currentCollage.name} • Code: {currentCollage.code}</p>
+              <p className="text-xs lg:text-sm text-gray-400">{currentCollage.name} • {currentCollage.code}</p>
             </div>
           </div>
           
-          {/* Camera Controls */}
+          {/* Camera Switch Button */}
           {!photo && devices.length > 1 && (
             <button
               onClick={switchCamera}
-              className="p-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              className="p-2 lg:p-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
               title="Switch Camera"
             >
-              <SwitchCamera className="w-5 h-5" />
+              <SwitchCamera className="w-4 h-4 lg:w-5 lg:h-5" />
             </button>
           )}
         </div>
 
         {/* Error Display */}
         {error && (
-          <div className={`mb-6 p-4 rounded-lg ${
+          <div className={`mx-4 lg:mx-8 mt-4 p-3 lg:p-4 rounded-lg ${
             error.includes('successfully') 
               ? 'bg-green-900/30 border border-green-500/50 text-green-200'
               : 'bg-red-900/30 border border-red-500/50 text-red-200'
           }`}>
-            {error}
+            <p className="text-sm lg:text-base">{error}</p>
           </div>
         )}
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Camera/Photo View */}
-          <div className="lg:col-span-2">
-            <div className="bg-gray-900 rounded-lg overflow-hidden">
+        {/* Main Photobooth Content */}
+        <div className="flex-1 flex flex-col lg:flex-row lg:items-center justify-center p-4 lg:p-8 gap-6 lg:gap-12">
+          
+          {/* Photobooth Preview - Portrait Oriented */}
+          <div className="flex flex-col items-center space-y-4 lg:space-y-6">
+            
+            {/* Camera/Photo Container */}
+            <div className="relative bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
               {photo ? (
                 /* Photo Preview */
                 <div className="relative">
                   <img 
                     src={photo} 
                     alt="Captured photo" 
-                    className="w-full h-auto"
+                    className="w-full h-auto max-w-xs lg:max-w-sm max-h-[60vh] object-contain"
                   />
-                  
-                  {/* Photo Controls Overlay */}
-                  <div className="absolute bottom-4 left-4 right-4 flex justify-center space-x-3">
-                    <button
-                      onClick={retakePhoto}
-                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center space-x-2"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Retake</span>
-                    </button>
-                    
-                    <button
-                      onClick={downloadPhoto}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Download</span>
-                    </button>
-                    
-                    <button
-                      onClick={uploadToCollage}
-                      disabled={uploading}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded-lg transition-colors flex items-center space-x-2"
-                    >
-                      {uploading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Uploading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          <span>Upload to Collage</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
                 </div>
               ) : (
-                /* Camera View */
-                <div className="relative aspect-video bg-gray-800">
+                /* Camera View - Portrait */
+                <div 
+                  className="relative bg-gray-800 w-80 lg:w-96" 
+                  style={{ aspectRatio: '9/16' }}
+                >
                   {/* Video Element */}
                   <video
                     ref={videoRef}
@@ -549,33 +522,33 @@ const PhotoboothPage: React.FC = () => {
                   
                   {/* Camera State Overlay */}
                   {cameraState !== 'active' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                      <div className="text-center text-white">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                      <div className="text-center text-white p-6">
                         {cameraState === 'starting' && (
                           <>
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-4"></div>
-                            <p>Starting camera...</p>
+                            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-white mb-4"></div>
+                            <p className="text-base lg:text-lg">Starting camera...</p>
                           </>
                         )}
                         {cameraState === 'error' && (
                           <>
-                            <Camera className="w-12 h-12 mx-auto mb-4 text-red-400" />
-                            <p className="text-red-200">Camera unavailable</p>
+                            <Camera className="w-16 h-16 mx-auto mb-4 text-red-400" />
+                            <p className="text-red-200 mb-4 text-base lg:text-lg">Camera unavailable</p>
                             <button
                               onClick={() => startCamera(selectedDevice)}
-                              className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
                             >
-                              Retry
+                              Retry Camera
                             </button>
                           </>
                         )}
                         {cameraState === 'idle' && (
                           <>
-                            <Camera className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                            <p>Camera not started</p>
+                            <Camera className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                            <p className="mb-4 text-base lg:text-lg">Ready to start</p>
                             <button
                               onClick={() => startCamera(selectedDevice)}
-                              className="mt-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
                             >
                               Start Camera
                             </button>
@@ -585,14 +558,53 @@ const PhotoboothPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Text Overlay Preview */}
+                  {/* Glassmorphic Text Input Overlay - Lower Third */}
+                  {cameraState === 'active' && (
+                    <div className="absolute bottom-20 left-4 right-4">
+                      <div className="bg-black/30 backdrop-blur-md rounded-xl border border-white/20 p-3 shadow-2xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Type className="w-3 h-3 text-white/80" />
+                          <span className="text-xs font-medium text-white/90">Add Text</span>
+                        </div>
+                        
+                        <textarea
+                          value={text}
+                          onChange={(e) => setText(e.target.value)}
+                          placeholder="Type your message..."
+                          className="w-full h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-xs text-white placeholder-white/60 resize-none focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all leading-tight"
+                          maxLength={80}
+                          rows={2}
+                        />
+                        
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-xs text-white/70">
+                            {text.length}/80
+                          </span>
+                          {text && (
+                            <button
+                              onClick={() => setText('')}
+                              className="text-xs text-red-300 hover:text-red-200 transition-colors px-2 py-1 hover:bg-red-500/20 rounded"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Text Preview Overlay - Lower Third */}
                   {text.trim() && cameraState === 'active' && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="absolute bottom-36 left-4 right-4 pointer-events-none">
                       <div 
-                        className="text-white font-bold text-center px-4 py-2 bg-black/50 rounded-lg max-w-[90%]"
+                        className="text-white font-bold text-center px-3 py-2 bg-black/70 backdrop-blur-sm rounded-lg mx-auto border border-white/20"
                         style={{ 
-                          fontSize: 'clamp(1rem, 4vw, 2rem)',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                          fontSize: 'clamp(0.875rem, 3vw, 1.25rem)',
+                          textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
+                          lineHeight: '1.2',
+                          maxWidth: '90%',
+                          wordWrap: 'break-word',
+                          whiteSpace: 'pre-wrap'
                         }}
                       >
                         {text}
@@ -602,12 +614,12 @@ const PhotoboothPage: React.FC = () => {
                   
                   {/* Capture Button */}
                   {cameraState === 'active' && (
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                    <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
                       <button
                         onClick={capturePhoto}
-                        className="w-16 h-16 bg-white rounded-full border-4 border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center"
+                        className="w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-full border-4 border-gray-200 hover:border-purple-400 transition-all duration-200 flex items-center justify-center shadow-xl hover:shadow-2xl transform hover:scale-105"
                       >
-                        <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+                        <div className="w-12 h-12 lg:w-14 lg:h-14 bg-purple-500 rounded-full"></div>
                       </button>
                     </div>
                   )}
@@ -617,78 +629,111 @@ const PhotoboothPage: React.FC = () => {
               {/* Hidden Canvas for Photo Processing */}
               <canvas ref={canvasRef} className="hidden" />
             </div>
+
+            {/* Text Input - Right below camera */}
+            {!photo && (
+              <div className="w-full max-w-xs lg:max-w-sm">
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-600">
+                  <p className="text-xs text-gray-400 text-center">
+                    💡 Use the text field on the camera preview to add your message
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Photo Action Buttons */}
+            {photo && (
+              <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs lg:max-w-sm">
+                <button
+                  onClick={retakePhoto}
+                  className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors flex items-center justify-center space-x-2 font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Retake</span>
+                </button>
+                
+                <button
+                  onClick={downloadPhoto}
+                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors flex items-center justify-center space-x-2 font-medium"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download</span>
+                </button>
+                
+                <button
+                  onClick={uploadToCollage}
+                  disabled={uploading}
+                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded-xl transition-colors flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
+                >
+                  {uploading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Upload</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Controls Panel */}
-          <div className="space-y-6">
-            {/* Text Overlay */}
-            <div className="bg-gray-900 rounded-lg p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <Type className="w-5 h-5 text-purple-400" />
-                <h3 className="text-lg font-semibold text-white">Add Text</h3>
-              </div>
-              
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Add text to your photo..."
-                className="w-full h-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-400 resize-none focus:outline-none focus:border-purple-500"
-                maxLength={100}
-              />
-              
-              <div className="flex justify-between items-center mt-2">
-                <span className="text-xs text-gray-400">
-                  {text.length}/100 characters
-                </span>
-                {text && (
-                  <button
-                    onClick={() => setText('')}
-                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-
+          {/* Side Panel - Camera Settings & Instructions */}
+          <div className="lg:w-80 space-y-4 lg:space-y-6">
+            
             {/* Camera Settings */}
             {devices.length > 0 && (
-              <div className="bg-gray-900 rounded-lg p-6">
+              <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-gray-700">
                 <div className="flex items-center space-x-2 mb-4">
-                  <Settings className="w-5 h-5 text-blue-400" />
-                  <h3 className="text-lg font-semibold text-white">Camera</h3>
+                  <Settings className="w-4 h-4 lg:w-5 lg:h-5 text-blue-400" />
+                  <h3 className="text-base lg:text-lg font-semibold text-white">Camera Settings</h3>
                 </div>
                 
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Select Camera
-                    </label>
-                    <select
-                      value={selectedDevice}
-                      onChange={(e) => handleDeviceChange(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                    >
-                      {devices.map((device) => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Select Camera
+                  </label>
+                  <select
+                    value={selectedDevice}
+                    onChange={(e) => handleDeviceChange(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  >
+                    {devices.map((device) => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}
 
             {/* Instructions */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-blue-300 mb-3">Instructions</h3>
+            <div className="bg-blue-900/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-4 lg:p-6">
+              <h3 className="text-base lg:text-lg font-semibold text-blue-300 mb-3 flex items-center">
+                <span className="text-2xl mr-2">📸</span>
+                How to Use
+              </h3>
               <ul className="text-sm text-blue-200 space-y-2">
-                <li>• Position yourself in the camera view</li>
-                <li>• Add optional text overlay</li>
-                <li>• Click the capture button to take a photo</li>
-                <li>• Upload your photo to add it to the collage</li>
-                <li>• Photos appear in the collage automatically!</li>
+                <li className="flex items-start">
+                  <span className="text-blue-400 mr-2 font-bold">1.</span>
+                  Position yourself in the camera view
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-400 mr-2 font-bold">2.</span>
+                  Add optional text overlay below camera
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-400 mr-2 font-bold">3.</span>
+                  Click the big purple button to take photo
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-400 mr-2 font-bold">4.</span>
+                  Upload to add it to the collage automatically!
+                </li>
               </ul>
             </div>
           </div>

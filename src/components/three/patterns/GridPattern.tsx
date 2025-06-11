@@ -1,3 +1,4 @@
+// src/components/three/patterns/GridPattern.tsx - FIXED: True edge-to-edge solid wall
 import { BasePattern, type PatternState, type Position } from './BasePattern';
 
 export class GridPattern extends BasePattern {
@@ -12,22 +13,23 @@ export class GridPattern extends BasePattern {
     const columns = Math.ceil(Math.sqrt(totalPhotos * aspectRatio));
     const rows = Math.ceil(totalPhotos / columns);
     
-    const photoSize = this.settings.photoSize || 1.0;
-    const spacingMultiplier = this.settings.photoSpacing || 0;
+    const photoSize = this.settings.photoSize || 4.0;
+    const spacingPercentage = this.settings.photoSpacing || 0; // 0 to 1 (0% to 100%)
     
-    // FIXED: FORCE edge-to-edge columns + minimal vertical overlap
+    // FIXED: True edge-to-edge when spacing is 0, equal spacing when spacing > 0
     let horizontalSpacing, verticalSpacing;
     
-    if (spacingMultiplier === 0) {
-      // TRUE SOLID WALL: Maximum horizontal overlap for edge-to-edge columns
-      horizontalSpacing = photoSize * 0.5;   // 50% horizontal overlap - force edge-to-edge
-      verticalSpacing = photoSize * 0.99;    // 1% vertical overlap to prevent flicker only
+    if (spacingPercentage === 0) {
+      // SOLID WALL: Photos touch edge-to-edge with NO gaps or overlaps
+      horizontalSpacing = photoSize * 0.562; // 56.2% = exact edge-to-edge for 16:9 photos
+      verticalSpacing = photoSize;           // Full photo height = no vertical overlap
     } else {
-      // EQUAL SPACING: Same calculation for both directions
-      const equalGap = spacingMultiplier * photoSize * 0.01; // 1% multiplier
+      // SPACED WALL: Equal gaps between photos horizontally and vertically
+      const gapSize = spacingPercentage * photoSize * 2; // Wide range: 0 to 200% of photo size
       
-      horizontalSpacing = photoSize + equalGap; // Exact same calculation
-      verticalSpacing = photoSize + equalGap;   // Exact same calculation
+      // Apply IDENTICAL spacing calculation for both directions
+      horizontalSpacing = photoSize + gapSize;  // photoSize + equal gap
+      verticalSpacing = photoSize + gapSize;    // photoSize + equal gap (same calculation)
     }
     
     // Wall positioning
@@ -41,21 +43,21 @@ export class GridPattern extends BasePattern {
     const speed = this.settings.animationSpeed / 100;
     const animationTime = this.settings.animationEnabled ? time * speed : 0;
     
+    // Generate positions for all photos
     for (let i = 0; i < totalPhotos; i++) {
       const col = i % columns;
       const row = Math.floor(i / columns);
       
-      // Use different spacing for X and Y
+      // Base position - centered wall
       const x = (col * horizontalSpacing) - (totalWallWidth / 2);
       const baseY = wallHeight + (row * verticalSpacing);
       
       let z = 0;
       let y = baseY;
       
-      // Animation
-      if (this.settings.animationEnabled) {
-        const actualGap = spacingMultiplier * photoSize;
-        const waveIntensity = Math.max(actualGap * 0.3, 0.1);
+      // Subtle animation when enabled (only when there's spacing)
+      if (this.settings.animationEnabled && spacingPercentage > 0) {
+        const waveIntensity = spacingPercentage * photoSize * 0.2; // Scale with spacing
         
         const waveX = Math.sin(animationTime * 0.5 + col * 0.3) * waveIntensity;
         const waveY = Math.cos(animationTime * 0.5 + row * 0.3) * waveIntensity;
@@ -63,16 +65,22 @@ export class GridPattern extends BasePattern {
         y += waveY;
         z += waveX;
         
+        // Keep above minimum wall height
         y = Math.max(y, wallHeight);
       }
       
       positions.push([x, y, z]);
       
-      // Rotation
+      // Rotation handling
       if (this.settings.photoRotation) {
-        const rotationY = Math.atan2(x, z + 10);
-        const rotationX = Math.sin(animationTime * 0.3 + col * 0.1) * 0.05;
-        const rotationZ = Math.cos(animationTime * 0.3 + row * 0.1) * 0.05;
+        let rotationX = 0, rotationY = 0, rotationZ = 0;
+        
+        if (this.settings.animationEnabled && spacingPercentage > 0) {
+          rotationY = Math.atan2(x, z + 10);
+          rotationX = Math.sin(animationTime * 0.3 + col * 0.1) * 0.05;
+          rotationZ = Math.cos(animationTime * 0.3 + row * 0.1) * 0.05;
+        }
+        
         rotations.push([rotationX, rotationY, rotationZ]);
       } else {
         rotations.push([0, 0, 0]);

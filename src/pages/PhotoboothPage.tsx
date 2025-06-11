@@ -35,6 +35,7 @@ const PhotoboothPage: React.FC = () => {
     
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
+        console.log('🛑 Stopping track:', track.kind, track.label);
         track.stop();
         track.enabled = false;
       });
@@ -44,6 +45,8 @@ const PhotoboothPage: React.FC = () => {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
       videoRef.current.pause();
+      // Force cleanup
+      videoRef.current.load();
     }
     
     setCameraState('idle');
@@ -83,8 +86,8 @@ const PhotoboothPage: React.FC = () => {
       // Clean up any existing camera first
       cleanupCamera();
 
-      // Small delay to ensure cleanup is complete
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Longer delay to ensure cleanup is complete
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Detect platform
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -121,8 +124,22 @@ const PhotoboothPage: React.FC = () => {
       
       console.log('🔧 Using constraints:', constraints);
       
-      // Get user media
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Get user media with retry logic
+      let mediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (firstAttemptError) {
+        console.warn('⚠️ First attempt failed, trying fallback constraints...', firstAttemptError);
+        
+        // Try with simpler constraints
+        const fallbackConstraints = {
+          video: { facingMode: "user" },
+          audio: false
+        };
+        
+        mediaStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+      }
+      
       console.log('✅ Got media stream:', mediaStream.active);
       
       // Update devices list after getting permission
@@ -188,7 +205,7 @@ const PhotoboothPage: React.FC = () => {
       } else if (err.name === 'NotFoundError') {
         errorMessage = 'No camera found. Please check your camera and try again.';
       } else if (err.name === 'NotReadableError') {
-        errorMessage = 'Camera is busy. Please close other apps using the camera and try again.';
+        errorMessage = 'Camera is busy or in use by another application. Please close other apps using the camera and try again.';
       } else if (err.name === 'OverconstrainedError') {
         // Try fallback constraints
         try {
@@ -260,13 +277,23 @@ const PhotoboothPage: React.FC = () => {
     }
   }, [photo, cameraState, startCamera, selectedDevice]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount and when switching devices
   useEffect(() => {
     return () => {
       console.log('🧹 Component unmounting, cleaning up...');
       cleanupCamera();
     };
   }, [cleanupCamera]);
+
+  // Also cleanup when device changes
+  useEffect(() => {
+    return () => {
+      if (selectedDevice) {
+        console.log('🔄 Device changed, cleaning up old camera...');
+        cleanupCamera();
+      }
+    };
+  }, [selectedDevice, cleanupCamera]);
 
   // Handle visibility change
   useEffect(() => {

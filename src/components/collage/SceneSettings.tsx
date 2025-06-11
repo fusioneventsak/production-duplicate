@@ -111,14 +111,17 @@ const SceneSettings: React.FC<{
             <input
               type="range"
               min="1"
-              max="10"
-              step="0.1"
+              max="20"
+              step="0.5"
               value={settings.photoSize}
               onChange={(e) => onSettingsChange({ 
                 photoSize: parseFloat(e.target.value) 
               }, true)}
               className="w-full bg-gray-800"
             />
+            <p className="mt-1 text-xs text-gray-400">
+              Photo size multiplier (1 = small, 20 = huge)
+            </p>
           </div>
 
           <div>

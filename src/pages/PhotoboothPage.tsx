@@ -527,7 +527,7 @@ const PhotoboothPage: React.FC = () => {
             {/* Camera/Photo Container */}
             <div className="relative bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
               {photo ? (
-                /* Photo Preview with Glassmorphic Text Input - Portrait */}
+                /* Photo Preview with Glassmorphic Text Input - Portrait */
                 <div className="relative max-w-xs lg:max-w-sm mx-auto">
                   <div 
                     className="relative bg-gray-800 rounded-lg overflow-hidden"

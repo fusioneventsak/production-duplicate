@@ -883,9 +883,17 @@ const SmartCameraControls: React.FC = () => {
   const rotationAngle = useRef(0);
   const baseRadius = useRef(15);
   const isMobile = useIsMobile();
+  const [isReady, setIsReady] = React.useState(false);
+
+  // Wait for camera to be properly initialized
+  React.useEffect(() => {
+    if (camera && camera.position) {
+      setIsReady(true);
+    }
+  }, [camera]);
 
   useFrame((state) => {
-    if (!controlsRef.current) return;
+    if (!camera || !camera.position) return;
     
     const currentTime = Date.now();
     const timeSinceInteraction = currentTime - lastInteractionTime.current;
@@ -909,29 +917,27 @@ const SmartCameraControls: React.FC = () => {
       camera.lookAt(0, 0, 0);
     }
     
-    if (!isMobile) {
+    if (!isMobile && controlsRef.current) {
       controlsRef.current.update();
     }
   });
 
   React.useEffect(() => {
-    if (!controlsRef.current) return;
+    if (!controlsRef.current || isMobile) return;
 
     const controls = controlsRef.current;
     
     const handleStart = () => {
-      if (!isMobile) {
-        isUserInteracting.current = true;
-        lastInteractionTime.current = Date.now();
-      }
+      isUserInteracting.current = true;
+      lastInteractionTime.current = Date.now();
     };
 
     const handleEnd = () => {
-      if (!isMobile) {
-        isUserInteracting.current = false;
-        lastInteractionTime.current = Date.now();
-        
-        // Update rotation angle and radius based on where user left the camera
+      isUserInteracting.current = false;
+      lastInteractionTime.current = Date.now();
+      
+      // Update rotation angle and radius based on where user left the camera
+      if (camera && camera.position) {
         const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
         baseRadius.current = Math.max(8, Math.min(25, distance)); // Clamp radius
         
@@ -941,7 +947,7 @@ const SmartCameraControls: React.FC = () => {
     };
 
     const handleChange = () => {
-      if (!isMobile && isUserInteracting.current) {
+      if (isUserInteracting.current) {
         lastInteractionTime.current = Date.now();
       }
     };
@@ -955,14 +961,19 @@ const SmartCameraControls: React.FC = () => {
       controls.removeEventListener('end', handleEnd);
       controls.removeEventListener('change', handleChange);
     };
-  }, [isMobile, camera]);
+  }, [isMobile, camera, isReady]);
+
+  // Don't render OrbitControls on mobile or before camera is ready
+  if (isMobile || !isReady) {
+    return null;
+  }
 
   return (
     <OrbitControls
       ref={controlsRef}
       enablePan={false}
       enableZoom={false}
-      enableRotate={!isMobile}
+      enableRotate={true}
       rotateSpeed={0.6}
       minDistance={8}
       maxDistance={25}
@@ -971,7 +982,6 @@ const SmartCameraControls: React.FC = () => {
       enableDamping={true}
       dampingFactor={0.1}
       autoRotate={false}
-      enabled={!isMobile}
     />
   );
 };

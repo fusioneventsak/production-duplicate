@@ -164,6 +164,11 @@ const LandingPage: React.FC = () => {
   // State for particle theme - shared between HeroScene and LandingParticleBackground
   const [particleTheme, setParticleTheme] = useState(PARTICLE_THEMES[0]);
 
+  // Handle theme changes from HeroScene
+  const handleThemeChange = (newTheme: typeof PARTICLE_THEMES[0]) => {
+    setParticleTheme(newTheme);
+  };
+
   return (
     <Layout>
       {/* Subtle Particle Background - Fixed behind all content */}
@@ -173,7 +178,7 @@ const LandingPage: React.FC = () => {
       <div className="relative overflow-hidden min-h-[100vh] flex items-center">
         {/* WebGL Scene Background */}
         <div className="absolute inset-0 w-full h-full">
-          <HeroScene />
+          <HeroScene onThemeChange={handleThemeChange} />
         </div>
         
         {/* Hero Content */}

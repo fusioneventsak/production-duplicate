@@ -171,17 +171,10 @@ const LandingPage: React.FC = () => {
 
   return (
     <Layout>
-      {/* FIXED: Updated Particle Background - Now positioned absolutely to cover entire page */}
-      <div className="absolute inset-0 w-full" style={{ 
-        height: '100%',
-        minHeight: '100vh',
-        zIndex: 1,
-        pointerEvents: 'none'
-      }}>
-        <LandingParticleBackground particleTheme={particleTheme} />
-      </div>
+      {/* FIXED: Particle Background - Now covers entire page properly */}
+      <LandingParticleBackground particleTheme={particleTheme} />
 
-      {/* All content sections need relative positioning and higher z-index */}
+      {/* All content sections with proper z-index */}
       <div className="relative z-10">
         {/* Hero Section with WebGL Background ONLY */}
         <div className="relative overflow-hidden min-h-[100vh] flex items-center">
@@ -257,8 +250,8 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* How It Works Section */}
-        <div className="py-16 bg-black/40 backdrop-blur-sm relative">
+        {/* How It Works Section - More transparent background */}
+        <div className="py-16 bg-black/20 backdrop-blur-sm relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-white">How It Works</h2>
@@ -301,8 +294,8 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Event Solutions Section */}
-        <div className="py-20 bg-gradient-to-b from-black/20 to-black/60 relative">
+        {/* Event Solutions Section - More transparent background */}
+        <div className="py-20 bg-gradient-to-b from-black/10 to-black/30 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-white mb-4">Perfect for Event Professionals</h2>
@@ -389,8 +382,8 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Large 3D UI Sections */}
-        <div className="py-20 bg-gradient-to-b from-black/60 to-black/40 relative">
+        {/* Large 3D UI Sections - More transparent background */}
+        <div className="py-20 bg-gradient-to-b from-black/30 to-black/20 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-white mb-4">Easy to Use - No Technical Skills Required</h2>
@@ -599,8 +592,8 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Contact & CTA Section */}
-        <div className="py-16 bg-gradient-to-b from-black/40 to-black/20 relative">
+        {/* Contact & CTA Section - More transparent background */}
+        <div className="py-16 bg-gradient-to-b from-black/20 to-black/10 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               {/* Contact Information */}
@@ -668,8 +661,8 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Trust Section */}
-        <div className="py-16 bg-black/20 relative">
+        {/* Trust Section - More transparent background */}
+        <div className="py-16 bg-black/10 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="bg-gradient-to-r from-purple-600 to-blue-500 rounded-full p-3 inline-block mb-4">
               <ShieldCheck className="h-6 w-6 text-white" />

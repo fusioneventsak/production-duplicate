@@ -226,156 +226,324 @@ const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, ind
   );
 };
 
-// Enhanced Particle System
-interface ParticleSystemProps {
+// Enhanced Milky Way Particle System with asymmetric clusters
+interface MilkyWayParticleSystemProps {
   colorTheme: typeof PARTICLE_THEMES[0];
   photoPositions: Array<{ position: [number, number, number] }>;
 }
 
-const ParticleSystem: React.FC<ParticleSystemProps> = ({ colorTheme, photoPositions }) => {
-  const pointsRef = useRef<THREE.Points>(null);
-  const glowPointsRef = useRef<THREE.Points>(null);
+const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTheme, photoPositions }) => {
+  const mainCloudRef = useRef<THREE.Points>(null);
+  const glowCloudRef = useRef<THREE.Points>(null);
+  const dustCloudRef = useRef<THREE.Points>(null);
+  const clustersRef = useRef<THREE.Group>(null);
   
+  // Create realistic particle distribution with clusters
   const particleData = useMemo(() => {
-    const baseCount = 200;
-    const photoParticleCount = photoPositions.length * 3; // 3 particles per photo
-    const totalCount = baseCount + photoParticleCount;
+    const mainCount = 2000; // Main particle cloud
+    const dustCount = 1500; // Dust particles
+    const clusterCount = 8; // Number of asymmetric clusters
+    const particlesPerCluster = 300;
     
-    const positions = new Float32Array(totalCount * 3);
-    const velocities = new Float32Array(totalCount * 3);
-    const sizes = new Float32Array(totalCount);
+    // Main cloud particles (distributed in a galaxy-like spiral)
+    const mainPositions = new Float32Array(mainCount * 3);
+    const mainVelocities = new Float32Array(mainCount * 3);
+    const mainSizes = new Float32Array(mainCount);
+    const mainOpacities = new Float32Array(mainCount);
     
-    let index = 0;
-    
-    // Base ambient particles
-    for (let i = 0; i < baseCount; i++) {
-      positions[index * 3] = (Math.random() - 0.5) * 40;
-      positions[index * 3 + 1] = Math.random() * 20 + 2;
-      positions[index * 3 + 2] = (Math.random() - 0.5) * 40;
+    for (let i = 0; i < mainCount; i++) {
+      // Create spiral galaxy distribution
+      const angle = (i / mainCount) * Math.PI * 8; // Multiple spiral arms
+      const radius = (Math.random() * 0.7 + 0.3) * 60; // Vary radius
+      const spiralOffset = Math.sin(angle * 0.5) * 10;
       
-      velocities[index * 3] = (Math.random() - 0.5) * 0.02;
-      velocities[index * 3 + 1] = Math.random() * 0.01 + 0.005;
-      velocities[index * 3 + 2] = (Math.random() - 0.5) * 0.02;
+      // Add noise for organic feel
+      const noise = (Math.random() - 0.5) * 15;
       
-      sizes[index] = Math.random() * 0.8 + 0.4;
-      index++;
+      mainPositions[i * 3] = Math.cos(angle) * (radius + spiralOffset) + noise;
+      mainPositions[i * 3 + 1] = (Math.random() - 0.5) * 40 + Math.sin(angle * 0.3) * 8; // Vertical variation
+      mainPositions[i * 3 + 2] = Math.sin(angle) * (radius + spiralOffset) + noise;
+      
+      // Velocities for subtle movement
+      mainVelocities[i * 3] = (Math.random() - 0.5) * 0.005;
+      mainVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.003;
+      mainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.005;
+      
+      // Vary sizes based on distance from center
+      const distanceFromCenter = Math.sqrt(
+        mainPositions[i * 3] ** 2 + 
+        mainPositions[i * 3 + 2] ** 2
+      );
+      mainSizes[i] = Math.random() * 1.5 + 0.3 + (distanceFromCenter * 0.01);
+      mainOpacities[i] = Math.max(0.1, 1 - (distanceFromCenter * 0.015));
     }
     
-    // Photo-specific particles
-    photoPositions.forEach((photo) => {
-      for (let i = 0; i < 3; i++) {
-        const offsetX = (Math.random() - 0.5) * 4;
-        const offsetY = Math.random() * 3 + 1;
-        const offsetZ = (Math.random() - 0.5) * 4;
+    // Dust cloud particles (more random, closer to scene)
+    const dustPositions = new Float32Array(dustCount * 3);
+    const dustVelocities = new Float32Array(dustCount * 3);
+    const dustSizes = new Float32Array(dustCount);
+    
+    for (let i = 0; i < dustCount; i++) {
+      // Concentrate dust near the photo area but extend beyond
+      const dustRadius = Math.random() * 45 + 15;
+      const dustAngle = Math.random() * Math.PI * 2;
+      
+      dustPositions[i * 3] = Math.cos(dustAngle) * dustRadius + (Math.random() - 0.5) * 20;
+      dustPositions[i * 3 + 1] = Math.random() * 25 + 5;
+      dustPositions[i * 3 + 2] = Math.sin(dustAngle) * dustRadius + (Math.random() - 0.5) * 20;
+      
+      dustVelocities[i * 3] = (Math.random() - 0.5) * 0.008;
+      dustVelocities[i * 3 + 1] = Math.random() * 0.005 + 0.002;
+      dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.008;
+      
+      dustSizes[i] = Math.random() * 0.8 + 0.2;
+    }
+    
+    // Create asymmetric clusters at various distances and angles
+    const clusterData = [];
+    for (let c = 0; c < clusterCount; c++) {
+      const clusterCenter = {
+        x: (Math.random() - 0.5) * 120,
+        y: Math.random() * 60 + 20,
+        z: (Math.random() - 0.5) * 120
+      };
+      
+      const clusterPositions = new Float32Array(particlesPerCluster * 3);
+      const clusterVelocities = new Float32Array(particlesPerCluster * 3);
+      const clusterSizes = new Float32Array(particlesPerCluster);
+      
+      for (let i = 0; i < particlesPerCluster; i++) {
+        // Create organic cluster shape
+        const clusterRadius = Math.random() * 8 + 2;
+        const clusterAngle = Math.random() * Math.PI * 2;
+        const clusterHeight = (Math.random() - 0.5) * 6;
         
-        positions[index * 3] = photo.position[0] + offsetX;
-        positions[index * 3 + 1] = photo.position[1] + offsetY;
-        positions[index * 3 + 2] = photo.position[2] + offsetZ;
+        clusterPositions[i * 3] = clusterCenter.x + Math.cos(clusterAngle) * clusterRadius;
+        clusterPositions[i * 3 + 1] = clusterCenter.y + clusterHeight;
+        clusterPositions[i * 3 + 2] = clusterCenter.z + Math.sin(clusterAngle) * clusterRadius;
         
-        velocities[index * 3] = (Math.random() - 0.5) * 0.01;
-        velocities[index * 3 + 1] = Math.random() * 0.02 + 0.01;
-        velocities[index * 3 + 2] = (Math.random() - 0.5) * 0.01;
+        clusterVelocities[i * 3] = (Math.random() - 0.5) * 0.003;
+        clusterVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.002;
+        clusterVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.003;
         
-        sizes[index] = Math.random() * 1.2 + 0.6;
-        index++;
+        clusterSizes[i] = Math.random() * 1.2 + 0.4;
       }
-    });
+      
+      clusterData.push({
+        positions: clusterPositions,
+        velocities: clusterVelocities,
+        sizes: clusterSizes,
+        center: clusterCenter
+      });
+    }
     
     return {
-      positions,
-      velocities,
-      sizes,
-      count: totalCount
+      main: {
+        positions: mainPositions,
+        velocities: mainVelocities,
+        sizes: mainSizes,
+        opacities: mainOpacities,
+        count: mainCount
+      },
+      dust: {
+        positions: dustPositions,
+        velocities: dustVelocities,
+        sizes: dustSizes,
+        count: dustCount
+      },
+      clusters: clusterData
     };
   }, [photoPositions]);
 
+  // Advanced animation system
   useFrame((state) => {
-    if (!pointsRef.current || !glowPointsRef.current) return;
-    
     const time = state.clock.getElapsedTime();
-    const positionArray = pointsRef.current.geometry.attributes.position.array as Float32Array;
-    const glowPositionArray = glowPointsRef.current.geometry.attributes.position.array as Float32Array;
     
-    for (let i = 0; i < particleData.count; i++) {
-      const i3 = i * 3;
+    // Animate main cloud
+    if (mainCloudRef.current && glowCloudRef.current) {
+      const mainPositions = mainCloudRef.current.geometry.attributes.position.array as Float32Array;
+      const glowPositions = glowCloudRef.current.geometry.attributes.position.array as Float32Array;
       
-      // Apply velocity
-      positionArray[i3] += particleData.velocities[i3];
-      positionArray[i3 + 1] += particleData.velocities[i3 + 1];
-      positionArray[i3 + 2] += particleData.velocities[i3 + 2];
-      
-      // Add wave motion
-      positionArray[i3] += Math.sin(time * 0.5 + i * 0.1) * 0.002;
-      positionArray[i3 + 1] += Math.cos(time * 0.3 + i * 0.05) * 0.001;
-      
-      // Reset particles that go too high
-      if (positionArray[i3 + 1] > 25) {
-        positionArray[i3 + 1] = -5;
-        positionArray[i3] = (Math.random() - 0.5) * 40;
-        positionArray[i3 + 2] = (Math.random() - 0.5) * 40;
+      for (let i = 0; i < particleData.main.count; i++) {
+        const i3 = i * 3;
+        
+        // Apply velocities
+        mainPositions[i3] += particleData.main.velocities[i3];
+        mainPositions[i3 + 1] += particleData.main.velocities[i3 + 1];
+        mainPositions[i3 + 2] += particleData.main.velocities[i3 + 2];
+        
+        // Add complex wave motion for realism
+        const waveFreq = time * 0.1 + i * 0.01;
+        mainPositions[i3] += Math.sin(waveFreq) * 0.002;
+        mainPositions[i3 + 1] += Math.cos(waveFreq * 0.7) * 0.001;
+        mainPositions[i3 + 2] += Math.sin(waveFreq * 1.3) * 0.002;
+        
+        // Copy to glow
+        glowPositions[i3] = mainPositions[i3];
+        glowPositions[i3 + 1] = mainPositions[i3 + 1];
+        glowPositions[i3 + 2] = mainPositions[i3 + 2];
       }
       
-      // Copy to glow particles
-      glowPositionArray[i3] = positionArray[i3];
-      glowPositionArray[i3 + 1] = positionArray[i3 + 1];
-      glowPositionArray[i3 + 2] = positionArray[i3 + 2];
+      mainCloudRef.current.geometry.attributes.position.needsUpdate = true;
+      glowCloudRef.current.geometry.attributes.position.needsUpdate = true;
+      
+      // Slow rotation of entire cloud
+      mainCloudRef.current.rotation.y = time * 0.005;
+      glowCloudRef.current.rotation.y = time * 0.005;
     }
     
-    pointsRef.current.geometry.attributes.position.needsUpdate = true;
-    glowPointsRef.current.geometry.attributes.position.needsUpdate = true;
+    // Animate dust cloud
+    if (dustCloudRef.current) {
+      const dustPositions = dustCloudRef.current.geometry.attributes.position.array as Float32Array;
+      
+      for (let i = 0; i < particleData.dust.count; i++) {
+        const i3 = i * 3;
+        
+        dustPositions[i3] += particleData.dust.velocities[i3];
+        dustPositions[i3 + 1] += particleData.dust.velocities[i3 + 1];
+        dustPositions[i3 + 2] += particleData.dust.velocities[i3 + 2];
+        
+        // Reset dust particles that drift too far
+        if (dustPositions[i3 + 1] > 50) {
+          dustPositions[i3 + 1] = 0;
+          dustPositions[i3] = (Math.random() - 0.5) * 60;
+          dustPositions[i3 + 2] = (Math.random() - 0.5) * 60;
+        }
+      }
+      
+      dustCloudRef.current.geometry.attributes.position.needsUpdate = true;
+      dustCloudRef.current.rotation.y = time * 0.008;
+    }
     
-    // Gentle rotation
-    pointsRef.current.rotation.y = time * 0.02;
-    glowPointsRef.current.rotation.y = time * 0.02;
+    // Animate clusters
+    if (clustersRef.current) {
+      clustersRef.current.children.forEach((cluster, clusterIndex) => {
+        if (cluster instanceof THREE.Points) {
+          const positions = cluster.geometry.attributes.position.array as Float32Array;
+          const velocities = particleData.clusters[clusterIndex].velocities;
+          
+          for (let i = 0; i < particleData.clusters[clusterIndex].positions.length / 3; i++) {
+            const i3 = i * 3;
+            positions[i3] += velocities[i3];
+            positions[i3 + 1] += velocities[i3 + 1];
+            positions[i3 + 2] += velocities[i3 + 2];
+            
+            // Add subtle cluster movement
+            const clusterWave = time * 0.05 + clusterIndex;
+            positions[i3] += Math.sin(clusterWave) * 0.001;
+            positions[i3 + 1] += Math.cos(clusterWave * 0.8) * 0.0005;
+            positions[i3 + 2] += Math.sin(clusterWave * 1.2) * 0.001;
+          }
+          
+          cluster.geometry.attributes.position.needsUpdate = true;
+        }
+      });
+    }
   });
 
   return (
     <group>
-      {/* Main particles */}
-      <points ref={pointsRef}>
+      {/* Main Milky Way Cloud */}
+      <points ref={mainCloudRef}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            array={particleData.positions}
-            count={particleData.count}
+            array={particleData.main.positions}
+            count={particleData.main.count}
             itemSize={3}
           />
           <bufferAttribute
             attach="attributes-size"
-            array={particleData.sizes}
-            count={particleData.count}
+            array={particleData.main.sizes}
+            count={particleData.main.count}
             itemSize={1}
           />
         </bufferGeometry>
         <pointsMaterial
           color={colorTheme.primary}
-          size={0.6}
+          size={0.4}
           transparent
-          opacity={0.7}
+          opacity={0.6}
           sizeAttenuation
-          vertexColors={false}
+          blending={THREE.AdditiveBlending}
         />
       </points>
       
-      {/* Glow effect particles */}
-      <points ref={glowPointsRef}>
+      {/* Glow layer for main cloud */}
+      <points ref={glowCloudRef}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            array={particleData.positions}
-            count={particleData.count}
+            array={particleData.main.positions}
+            count={particleData.main.count}
             itemSize={3}
           />
         </bufferGeometry>
         <pointsMaterial
           color={colorTheme.accent}
-          size={1.2}
+          size={0.8}
           transparent
-          opacity={0.3}
+          opacity={0.2}
           sizeAttenuation
           blending={THREE.AdditiveBlending}
         />
       </points>
+      
+      {/* Dust Cloud */}
+      <points ref={dustCloudRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            array={particleData.dust.positions}
+            count={particleData.dust.count}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-size"
+            array={particleData.dust.sizes}
+            count={particleData.dust.count}
+            itemSize={1}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color={colorTheme.secondary}
+          size={0.3}
+          transparent
+          opacity={0.4}
+          sizeAttenuation
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      
+      {/* Asymmetric Clusters */}
+      <group ref={clustersRef}>
+        {particleData.clusters.map((cluster, index) => (
+          <points key={index}>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                array={cluster.positions}
+                count={cluster.positions.length / 3}
+                itemSize={3}
+              />
+              <bufferAttribute
+                attach="attributes-size"
+                array={cluster.sizes}
+                count={cluster.sizes.length}
+                itemSize={1}
+              />
+            </bufferGeometry>
+            <pointsMaterial
+              color={index % 2 === 0 ? colorTheme.primary : colorTheme.accent}
+              size={0.5}
+              transparent
+              opacity={0.7}
+              sizeAttenuation
+              blending={THREE.AdditiveBlending}
+            />
+          </points>
+        ))}
+      </group>
     </group>
   );
 };
@@ -476,28 +644,54 @@ const GradientBackground: React.FC = () => {
   );
 };
 
-// Auto-rotating camera controller with mobile support
-const AutoRotatingCamera: React.FC = () => {
+// Smart auto-rotating camera with user interaction memory
+const SmartAutoRotatingCamera: React.FC = () => {
   const controlsRef = useRef<any>();
   const { camera } = useThree();
   const isUserInteracting = useRef(false);
   const lastInteractionTime = useRef(0);
+  const lastUserPosition = useRef({ theta: 0, phi: 0, radius: 15 });
+  const autoRotationStartTime = useRef(0);
   const isMobile = useIsMobile();
 
   useFrame((state) => {
     if (!controlsRef.current) return;
     
     const currentTime = Date.now();
-    const time = currentTime * 0.0001;
+    const timeSinceInteraction = currentTime - lastInteractionTime.current;
     
-    if (!isUserInteracting.current || isMobile) {
-      const radius = 15;
-      const heightBase = 5;
-      const heightVariation = 1;
+    // If user hasn't interacted for 3 seconds, resume auto-rotation
+    const shouldAutoRotate = !isUserInteracting.current && timeSinceInteraction > 3000;
+    
+    if (shouldAutoRotate || isMobile) {
+      // If just starting auto-rotation, record the current position
+      if (!autoRotationStartTime.current) {
+        autoRotationStartTime.current = currentTime;
+        
+        // Convert current camera position to spherical coordinates
+        const spherical = new THREE.Spherical();
+        spherical.setFromVector3(camera.position);
+        lastUserPosition.current = {
+          theta: spherical.theta,
+          phi: spherical.phi,
+          radius: spherical.radius
+        };
+      }
       
-      camera.position.x = radius * Math.cos(time);
-      camera.position.z = radius * Math.sin(time);
-      camera.position.y = heightBase + Math.sin(time * 2) * heightVariation;
+      // Calculate auto-rotation progress
+      const autoTime = (currentTime - autoRotationStartTime.current) * 0.0001;
+      
+      // Continue rotation from where user left off
+      const newTheta = lastUserPosition.current.theta + autoTime;
+      const phi = lastUserPosition.current.phi;
+      const radius = lastUserPosition.current.radius;
+      
+      // Apply smooth height variation
+      const heightVariation = Math.sin(autoTime * 2) * 1;
+      
+      camera.position.x = radius * Math.sin(phi) * Math.cos(newTheta);
+      camera.position.y = radius * Math.cos(phi) + heightVariation;
+      camera.position.z = radius * Math.sin(phi) * Math.sin(newTheta);
       
       camera.lookAt(0, 0, 0);
     }
@@ -514,6 +708,7 @@ const AutoRotatingCamera: React.FC = () => {
       if (!isMobile) {
         isUserInteracting.current = true;
         lastInteractionTime.current = Date.now();
+        autoRotationStartTime.current = 0; // Reset auto-rotation timer
       }
     };
 
@@ -524,12 +719,21 @@ const AutoRotatingCamera: React.FC = () => {
       }
     };
 
+    const handleChange = () => {
+      if (!isMobile) {
+        lastInteractionTime.current = Date.now();
+        autoRotationStartTime.current = 0; // Reset auto-rotation timer
+      }
+    };
+
     controls.addEventListener('start', handleStart);
     controls.addEventListener('end', handleEnd);
+    controls.addEventListener('change', handleChange);
 
     return () => {
       controls.removeEventListener('start', handleStart);
       controls.removeEventListener('end', handleEnd);
+      controls.removeEventListener('change', handleChange);
     };
   }, [isMobile]);
 
@@ -537,19 +741,20 @@ const AutoRotatingCamera: React.FC = () => {
     <OrbitControls
       ref={controlsRef}
       enablePan={false}
-      enableZoom={false}
+      enableZoom={true}
       enableRotate={!isMobile}
-      rotateSpeed={0.5}
-      minDistance={12}
-      maxDistance={18}
-      minPolarAngle={Math.PI / 6}
-      maxPolarAngle={Math.PI - Math.PI / 6}
+      rotateSpeed={0.8}
+      zoomSpeed={0.6}
+      minDistance={8}
+      maxDistance={25}
+      minPolarAngle={Math.PI / 8}
+      maxPolarAngle={Math.PI - Math.PI / 8}
       enableDamping={true}
-      dampingFactor={0.05}
+      dampingFactor={0.08}
       autoRotate={false}
       touches={{
         ONE: isMobile ? THREE.TOUCH.NONE : THREE.TOUCH.ROTATE,
-        TWO: THREE.TOUCH.NONE
+        TWO: isMobile ? THREE.TOUCH.NONE : THREE.TOUCH.DOLLY_PAN
       }}
     />
   );

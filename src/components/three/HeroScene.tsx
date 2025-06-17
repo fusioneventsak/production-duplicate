@@ -238,20 +238,21 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
   const dustCloudRef = useRef<THREE.Points>(null);
   const clustersRef = useRef<THREE.Group>(null);
   
+  // Fixed particle counts to prevent buffer size mismatches
+  const MAIN_COUNT = 3500;
+  const DUST_COUNT = 2000;
+  const CLUSTER_COUNT = 12;
+  const PARTICLES_PER_CLUSTER = 200;
+  
   // Create realistic particle distribution with clusters
   const particleData = useMemo(() => {
-    const mainCount = 3500; // Increased for denser, more realistic look
-    const dustCount = 2000; // More dust particles
-    const clusterCount = 12; // More clusters
-    const particlesPerCluster = 200;
-    
     // Main cloud particles (distributed in a galaxy-like spiral)
-    const mainPositions = new Float32Array(mainCount * 3);
-    const mainVelocities = new Float32Array(mainCount * 3);
-    const mainSizes = new Float32Array(mainCount);
-    const mainBrightness = new Float32Array(mainCount);
+    const mainPositions = new Float32Array(MAIN_COUNT * 3);
+    const mainVelocities = new Float32Array(MAIN_COUNT * 3);
+    const mainSizes = new Float32Array(MAIN_COUNT);
+    const mainBrightness = new Float32Array(MAIN_COUNT);
     
-    for (let i = 0; i < mainCount; i++) {
+    for (let i = 0; i < MAIN_COUNT; i++) {
       // Create multiple spiral arms like the Milky Way
       const armIndex = Math.floor(Math.random() * 4); // 4 spiral arms
       const armAngle = (armIndex * Math.PI / 2) + (Math.random() - 0.5) * 0.5;
@@ -291,11 +292,11 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
     }
     
     // Dust cloud particles (very fine, close to photos)
-    const dustPositions = new Float32Array(dustCount * 3);
-    const dustVelocities = new Float32Array(dustCount * 3);
-    const dustSizes = new Float32Array(dustCount);
+    const dustPositions = new Float32Array(DUST_COUNT * 3);
+    const dustVelocities = new Float32Array(DUST_COUNT * 3);
+    const dustSizes = new Float32Array(DUST_COUNT);
     
-    for (let i = 0; i < dustCount; i++) {
+    for (let i = 0; i < DUST_COUNT; i++) {
       // Concentrate around photo area with exponential falloff
       const radius = Math.pow(Math.random(), 2) * 50 + 10;
       const angle = Math.random() * Math.PI * 2;
@@ -315,7 +316,7 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
     
     // Create dense star clusters at various distances
     const clusterData = [];
-    for (let c = 0; c < clusterCount; c++) {
+    for (let c = 0; c < CLUSTER_COUNT; c++) {
       const clusterDistance = 30 + Math.random() * 100;
       const clusterAngle = Math.random() * Math.PI * 2;
       const clusterHeight = (Math.random() - 0.5) * 60 + 20;
@@ -326,11 +327,11 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         z: Math.sin(clusterAngle) * clusterDistance
       };
       
-      const clusterPositions = new Float32Array(particlesPerCluster * 3);
-      const clusterVelocities = new Float32Array(particlesPerCluster * 3);
-      const clusterSizes = new Float32Array(particlesPerCluster);
+      const clusterPositions = new Float32Array(PARTICLES_PER_CLUSTER * 3);
+      const clusterVelocities = new Float32Array(PARTICLES_PER_CLUSTER * 3);
+      const clusterSizes = new Float32Array(PARTICLES_PER_CLUSTER);
       
-      for (let i = 0; i < particlesPerCluster; i++) {
+      for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
         // Dense spherical distribution
         const phi = Math.random() * Math.PI * 2;
         const cosTheta = Math.random() * 2 - 1;
@@ -366,17 +367,17 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         velocities: mainVelocities,
         sizes: mainSizes,
         brightness: mainBrightness,
-        count: mainCount
+        count: MAIN_COUNT
       },
       dust: {
         positions: dustPositions,
         velocities: dustVelocities,
         sizes: dustSizes,
-        count: dustCount
+        count: DUST_COUNT
       },
       clusters: clusterData
     };
-  }, [photoPositions]);
+  }, []); // Remove photoPositions dependency to prevent recreation
 
   // Advanced animation system
   useFrame((state) => {
@@ -441,24 +442,28 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
     // Animate clusters
     if (clustersRef.current) {
       clustersRef.current.children.forEach((cluster, clusterIndex) => {
-        if (cluster instanceof THREE.Points) {
+        if (cluster instanceof THREE.Points && clusterIndex < particleData.clusters.length) {
           const positions = cluster.geometry.attributes.position.array as Float32Array;
           const velocities = particleData.clusters[clusterIndex].velocities;
+          const expectedLength = PARTICLES_PER_CLUSTER * 3;
           
-          for (let i = 0; i < particleData.clusters[clusterIndex].positions.length / 3; i++) {
-            const i3 = i * 3;
-            positions[i3] += velocities[i3];
-            positions[i3 + 1] += velocities[i3 + 1];
-            positions[i3 + 2] += velocities[i3 + 2];
+          // Safety check to prevent buffer size mismatch
+          if (positions.length === expectedLength && velocities.length === expectedLength) {
+            for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
+              const i3 = i * 3;
+              positions[i3] += velocities[i3];
+              positions[i3 + 1] += velocities[i3 + 1];
+              positions[i3 + 2] += velocities[i3 + 2];
+              
+              // Add subtle cluster movement
+              const clusterWave = time * 0.05 + clusterIndex;
+              positions[i3] += Math.sin(clusterWave) * 0.001;
+              positions[i3 + 1] += Math.cos(clusterWave * 0.8) * 0.0005;
+              positions[i3 + 2] += Math.sin(clusterWave * 1.2) * 0.001;
+            }
             
-            // Add subtle cluster movement
-            const clusterWave = time * 0.05 + clusterIndex;
-            positions[i3] += Math.sin(clusterWave) * 0.001;
-            positions[i3 + 1] += Math.cos(clusterWave * 0.8) * 0.0005;
-            positions[i3 + 2] += Math.sin(clusterWave * 1.2) * 0.001;
+            cluster.geometry.attributes.position.needsUpdate = true;
           }
-          
-          cluster.geometry.attributes.position.needsUpdate = true;
         }
       });
     }
@@ -484,9 +489,9 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         </bufferGeometry>
         <pointsMaterial
           color={colorTheme.primary}
-          size={0.4}
+          size={0.15}
           transparent
-          opacity={0.6}
+          opacity={0.8}
           sizeAttenuation
           blending={THREE.AdditiveBlending}
         />
@@ -504,9 +509,9 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         </bufferGeometry>
         <pointsMaterial
           color={colorTheme.accent}
-          size={0.8}
+          size={0.3}
           transparent
-          opacity={0.2}
+          opacity={0.3}
           sizeAttenuation
           blending={THREE.AdditiveBlending}
         />
@@ -530,9 +535,9 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         </bufferGeometry>
         <pointsMaterial
           color={colorTheme.secondary}
-          size={0.3}
+          size={0.08}
           transparent
-          opacity={0.4}
+          opacity={0.6}
           sizeAttenuation
           blending={THREE.AdditiveBlending}
         />
@@ -558,9 +563,9 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
             </bufferGeometry>
             <pointsMaterial
               color={index % 2 === 0 ? colorTheme.primary : colorTheme.accent}
-              size={0.5}
+              size={0.12}
               transparent
-              opacity={0.7}
+              opacity={0.9}
               sizeAttenuation
               blending={THREE.AdditiveBlending}
             />
@@ -1013,8 +1018,8 @@ const HeroScene: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      {/* Particle Theme Controls - positioned OUTSIDE Canvas */}
-      <div className="fixed top-4 right-4 z-50">
+      {/* Particle Theme Controls - positioned OUTSIDE Canvas at better location */}
+      <div className="fixed top-20 right-4 z-50">
         <div className="relative">
           <button
             onClick={() => {
@@ -1022,10 +1027,10 @@ const HeroScene: React.FC = () => {
               const nextIndex = (currentIndex + 1) % PARTICLE_THEMES.length;
               setParticleTheme(PARTICLE_THEMES[nextIndex]);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-black/20 backdrop-blur-md border border-white/10 rounded-lg text-white hover:bg-black/30 transition-all duration-200 shadow-lg"
+            className="flex items-center gap-2 px-3 py-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-lg text-white hover:bg-black/40 transition-all duration-200 shadow-lg text-sm"
             aria-label="Change particle colors"
           >
-            <Palette size={20} />
+            <Palette size={16} />
             <span className="hidden sm:inline">{particleTheme.name}</span>
           </button>
         </div>

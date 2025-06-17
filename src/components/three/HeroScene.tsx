@@ -379,11 +379,11 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
     };
   }, []); // Remove photoPositions dependency to prevent recreation
 
-  // Advanced animation system
+  // Advanced animation system with realistic stellar motion
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     
-    // Animate main cloud
+    // Animate main cloud with galactic rotation
     if (mainCloudRef.current && glowCloudRef.current) {
       const mainPositions = mainCloudRef.current.geometry.attributes.position.array as Float32Array;
       const glowPositions = glowCloudRef.current.geometry.attributes.position.array as Float32Array;
@@ -391,18 +391,32 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       for (let i = 0; i < particleData.main.count; i++) {
         const i3 = i * 3;
         
-        // Apply velocities
+        // Apply stellar velocities
         mainPositions[i3] += particleData.main.velocities[i3];
         mainPositions[i3 + 1] += particleData.main.velocities[i3 + 1];
         mainPositions[i3 + 2] += particleData.main.velocities[i3 + 2];
         
-        // Add complex wave motion for realism
-        const waveFreq = time * 0.1 + i * 0.01;
-        mainPositions[i3] += Math.sin(waveFreq) * 0.002;
-        mainPositions[i3 + 1] += Math.cos(waveFreq * 0.7) * 0.001;
-        mainPositions[i3 + 2] += Math.sin(waveFreq * 1.3) * 0.002;
+        // Add complex galactic motion patterns
+        const x = mainPositions[i3];
+        const z = mainPositions[i3 + 2];
+        const distanceFromCenter = Math.sqrt(x * x + z * z);
         
-        // Copy to glow
+        // Galactic rotation - closer stars orbit faster (like real galaxies)
+        const orbitalSpeed = distanceFromCenter > 0 ? 0.00008 / Math.sqrt(distanceFromCenter + 10) : 0;
+        const angle = Math.atan2(z, x);
+        const newAngle = angle + orbitalSpeed;
+        
+        // Apply subtle orbital motion
+        mainPositions[i3] += Math.cos(newAngle) * orbitalSpeed * 0.1;
+        mainPositions[i3 + 2] += Math.sin(newAngle) * orbitalSpeed * 0.1;
+        
+        // Add stellar parallax and depth motion
+        const parallaxFreq = time * 0.02 + i * 0.001;
+        mainPositions[i3] += Math.sin(parallaxFreq) * 0.001;
+        mainPositions[i3 + 1] += Math.cos(parallaxFreq * 0.7) * 0.0005;
+        mainPositions[i3 + 2] += Math.sin(parallaxFreq * 1.3) * 0.001;
+        
+        // Copy to glow layer
         glowPositions[i3] = mainPositions[i3];
         glowPositions[i3 + 1] = mainPositions[i3 + 1];
         glowPositions[i3 + 2] = mainPositions[i3 + 2];
@@ -411,58 +425,93 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       mainCloudRef.current.geometry.attributes.position.needsUpdate = true;
       glowCloudRef.current.geometry.attributes.position.needsUpdate = true;
       
-      // Slow rotation of entire cloud
-      mainCloudRef.current.rotation.y = time * 0.005;
-      glowCloudRef.current.rotation.y = time * 0.005;
+      // Galactic rotation - very slow
+      mainCloudRef.current.rotation.y = time * 0.003;
+      glowCloudRef.current.rotation.y = time * 0.003;
     }
     
-    // Animate dust cloud
+    // Animate dust cloud with atmospheric turbulence
     if (dustCloudRef.current) {
       const dustPositions = dustCloudRef.current.geometry.attributes.position.array as Float32Array;
       
       for (let i = 0; i < particleData.dust.count; i++) {
         const i3 = i * 3;
         
+        // Apply dust velocities
         dustPositions[i3] += particleData.dust.velocities[i3];
         dustPositions[i3 + 1] += particleData.dust.velocities[i3 + 1];
         dustPositions[i3 + 2] += particleData.dust.velocities[i3 + 2];
         
-        // Reset dust particles that drift too far
-        if (dustPositions[i3 + 1] > 50) {
-          dustPositions[i3 + 1] = 0;
-          dustPositions[i3] = (Math.random() - 0.5) * 60;
-          dustPositions[i3 + 2] = (Math.random() - 0.5) * 60;
+        // Add atmospheric turbulence
+        const turbulenceFreq = time * 0.1 + i * 0.05;
+        dustPositions[i3] += Math.sin(turbulenceFreq) * 0.002;
+        dustPositions[i3 + 1] += Math.cos(turbulenceFreq * 1.3) * 0.001;
+        dustPositions[i3 + 2] += Math.sin(turbulenceFreq * 0.8) * 0.002;
+        
+        // Reset dust particles that drift too far (cosmic recycling)
+        if (dustPositions[i3 + 1] > 60) {
+          dustPositions[i3 + 1] = -10;
+          dustPositions[i3] = (Math.random() - 0.5) * 70;
+          dustPositions[i3 + 2] = (Math.random() - 0.5) * 70;
+        }
+        
+        // Boundary wrapping for infinite effect
+        if (Math.abs(dustPositions[i3]) > 80) {
+          dustPositions[i3] = -Math.sign(dustPositions[i3]) * 20;
+        }
+        if (Math.abs(dustPositions[i3 + 2]) > 80) {
+          dustPositions[i3 + 2] = -Math.sign(dustPositions[i3 + 2]) * 20;
         }
       }
       
       dustCloudRef.current.geometry.attributes.position.needsUpdate = true;
-      dustCloudRef.current.rotation.y = time * 0.008;
+      dustCloudRef.current.rotation.y = time * 0.005;
     }
     
-    // Animate clusters
+    // Animate clusters with gravitational dynamics
     if (clustersRef.current) {
       clustersRef.current.children.forEach((cluster, clusterIndex) => {
         if (cluster instanceof THREE.Points && clusterIndex < particleData.clusters.length) {
           const positions = cluster.geometry.attributes.position.array as Float32Array;
           const velocities = particleData.clusters[clusterIndex].velocities;
           const expectedLength = PARTICLES_PER_CLUSTER * 3;
+          const clusterCenter = particleData.clusters[clusterIndex].center;
           
           // Safety check to prevent buffer size mismatch
           if (positions.length === expectedLength && velocities.length === expectedLength) {
             for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
               const i3 = i * 3;
+              
+              // Apply cluster particle velocities
               positions[i3] += velocities[i3];
               positions[i3 + 1] += velocities[i3 + 1];
               positions[i3 + 2] += velocities[i3 + 2];
               
-              // Add subtle cluster movement
-              const clusterWave = time * 0.05 + clusterIndex;
-              positions[i3] += Math.sin(clusterWave) * 0.001;
-              positions[i3 + 1] += Math.cos(clusterWave * 0.8) * 0.0005;
-              positions[i3 + 2] += Math.sin(clusterWave * 1.2) * 0.001;
+              // Gravitational attraction to cluster center (weak)
+              const dx = clusterCenter.x - positions[i3];
+              const dy = clusterCenter.y - positions[i3 + 1];
+              const dz = clusterCenter.z - positions[i3 + 2];
+              const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+              
+              if (distance > 0) {
+                const gravitationalForce = 0.00001;
+                positions[i3] += (dx / distance) * gravitationalForce;
+                positions[i3 + 1] += (dy / distance) * gravitationalForce;
+                positions[i3 + 2] += (dz / distance) * gravitationalForce;
+              }
+              
+              // Add cluster internal motion
+              const clusterWave = time * 0.03 + clusterIndex + i * 0.1;
+              positions[i3] += Math.sin(clusterWave) * 0.0005;
+              positions[i3 + 1] += Math.cos(clusterWave * 0.8) * 0.0003;
+              positions[i3 + 2] += Math.sin(clusterWave * 1.2) * 0.0005;
             }
             
             cluster.geometry.attributes.position.needsUpdate = true;
+            
+            // Cluster rotation
+            cluster.rotation.x = time * 0.001 * (clusterIndex % 2 ? 1 : -1);
+            cluster.rotation.z = time * 0.0015 * (clusterIndex % 3 ? 1 : -1);
           }
         }
       });

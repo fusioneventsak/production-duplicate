@@ -1236,14 +1236,14 @@ const HeroScene: React.FC = () => {
         </div>
       </div>
 
-      {/* iOS-optimized container - completely passive on mobile */}
+      {/* iOS-optimized container - completely passive for smooth scrolling */}
       <div 
-        className="absolute inset-0 w-full h-full pointer-events-none"
+        className="absolute inset-0 w-full h-full"
         style={{ 
-          touchAction: 'none',
-          WebkitTouchCallout: 'none',
-          WebkitUserSelect: 'none',
-          userSelect: 'none'
+          pointerEvents: 'none',
+          WebkitOverflowScrolling: 'touch',
+          transform: 'translateZ(0)', // Hardware acceleration
+          willChange: 'transform'
         }}
       >
         <Canvas
@@ -1259,15 +1259,17 @@ const HeroScene: React.FC = () => {
             background: 'transparent',
             width: '100%',
             height: '100%',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            transform: 'translateZ(0)', // Hardware acceleration
+            backfaceVisibility: 'hidden'
           }}
           onCreated={({ gl }) => {
             gl.shadowMap.enabled = false;
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = 1.2;
           }}
-          eventSource={undefined}
-          eventPrefix="client"
+          frameloop="always"
+          dpr={[1, 2]}
         >
           <Suspense fallback={<LoadingFallback />}>
             <Scene particleTheme={particleTheme} />

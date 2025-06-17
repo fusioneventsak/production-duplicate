@@ -1229,14 +1229,17 @@ const HeroScene: React.FC = () => {
         </div>
       </div>
 
-      {/* CRITICAL: Fixed mobile scrolling by ensuring proper touch handling */}
+      {/* CRITICAL: Enhanced mobile scrolling fix for iOS */}
       <div 
         className="absolute inset-0 w-full h-full"
         style={{ 
-          // Allow mobile scrolling by preventing canvas from capturing touch events
-          touchAction: 'pan-y',
-          // Conditionally enable pointer events based on screen size
-          pointerEvents: typeof window !== 'undefined' && window.innerWidth < 768 ? 'none' : 'auto'
+          // iOS-specific touch handling
+          touchAction: 'pan-y manipulation',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          // Disable pointer events on mobile/touch devices completely
+          pointerEvents: typeof window !== 'undefined' && 
+            (window.innerWidth < 768 || 'ontouchstart' in window) ? 'none' : 'auto'
         }}
       >
         <Canvas
@@ -1245,20 +1248,36 @@ const HeroScene: React.FC = () => {
           gl={{ 
             antialias: true, 
             alpha: true,
-            powerPreference: "high-performance"
+            powerPreference: "high-performance",
+            preserveDrawingBuffer: false, // Better for mobile performance
           }}
-          style={{ background: 'transparent' }}
+          style={{ 
+            background: 'transparent',
+            // Additional iOS fixes
+            touchAction: 'none',
+            WebkitTouchCallout: 'none',
+            WebkitUserSelect: 'none',
+            userSelect: 'none'
+          }}
           onCreated={({ gl }) => {
             gl.shadowMap.enabled = false;
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = 1.2;
+            
+            // iOS-specific canvas fixes
+            const canvas = gl.domElement;
+            canvas.style.touchAction = 'none';
+            canvas.style.userSelect = 'none';
+            canvas.style.webkitUserSelect = 'none';
           }}
-          // Prevent canvas from interfering with touch scrolling
+          // Prevent all canvas touch interactions on mobile
           onPointerMissed={(e) => {
-            if (typeof window !== 'undefined' && window.innerWidth < 768) {
-              e.stopPropagation();
-            }
+            e.stopPropagation();
           }}
+          // Disable all events on touch devices
+          events={typeof window !== 'undefined' && 'ontouchstart' in window ? 
+            { enabled: false } : undefined
+          }
         >
           <Suspense fallback={<LoadingFallback />}>
             <Scene particleTheme={particleTheme} />

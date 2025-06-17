@@ -346,11 +346,12 @@ interface LandingParticleBackgroundProps {
 export const LandingParticleBackground: React.FC<LandingParticleBackgroundProps> = ({ particleTheme }) => {
   return (
     <div 
-      className="fixed inset-0 w-full h-full pointer-events-none"
+      className="fixed inset-0 w-full h-full"
       style={{ 
-        zIndex: 1, // Lower z-index - behind hero scene
+        zIndex: -1, // Negative z-index to ensure it's behind everything
         pointerEvents: 'none',
-        touchAction: 'none'
+        touchAction: 'none',
+        userSelect: 'none'
       }}
     >
       <Canvas
@@ -364,7 +365,9 @@ export const LandingParticleBackground: React.FC<LandingParticleBackgroundProps>
           background: 'transparent',
           pointerEvents: 'none',
           width: '100%',
-          height: '100%'
+          height: '100%',
+          userSelect: 'none',
+          WebkitUserSelect: 'none'
         }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -374,6 +377,8 @@ export const LandingParticleBackground: React.FC<LandingParticleBackgroundProps>
         }}
         frameloop="always"
         dpr={[1, 1.5]}
+        eventSource={undefined}
+        eventPrefix="client"
       >
         <Suspense fallback={null}>
           <SubtleParticleSystem colorTheme={particleTheme} />

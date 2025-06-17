@@ -284,27 +284,6 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         // 10% larger particles (star clusters)
         mainSizes[i] = 4 + Math.random() * 3;
       }
-      
-      // Color variation within theme - create realistic star colors
-      const baseColor = new THREE.Color(colorTheme.primary);
-      const hsl = { h: 0, s: 0, l: 0 };
-      baseColor.getHSL(hsl);
-      
-      // Vary hue slightly within the theme
-      const hueVariation = (Math.random() - 0.5) * 0.1; // ±10% hue variation
-      const saturationVariation = 0.8 + Math.random() * 0.4; // 80-120% saturation
-      const lightnessVariation = 0.3 + Math.random() * 0.7; // 30-100% lightness
-      
-      const particleColor = new THREE.Color();
-      particleColor.setHSL(
-        (hsl.h + hueVariation + 1) % 1, // Ensure hue stays in 0-1 range
-        Math.min(1, hsl.s * saturationVariation),
-        Math.min(1, hsl.l * lightnessVariation)
-      );
-      
-      mainColors[i * 3] = particleColor.r;
-      mainColors[i * 3 + 1] = particleColor.g;
-      mainColors[i * 3 + 2] = particleColor.b;
     }
     
     // Dust cloud particles (very fine, close to photos)
@@ -329,22 +308,6 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       
       // Very fine dust particles
       dustSizes[i] = 0.3 + Math.random() * 1.2;
-      
-      // Dust color variation - use secondary color with variation
-      const baseColor = new THREE.Color(colorTheme.secondary);
-      const hsl = { h: 0, s: 0, l: 0 };
-      baseColor.getHSL(hsl);
-      
-      const particleColor = new THREE.Color();
-      particleColor.setHSL(
-        (hsl.h + (Math.random() - 0.5) * 0.15 + 1) % 1,
-        Math.min(1, hsl.s * (0.5 + Math.random() * 0.5)),
-        Math.min(1, hsl.l * (0.4 + Math.random() * 0.6))
-      );
-      
-      dustColors[i * 3] = particleColor.r;
-      dustColors[i * 3 + 1] = particleColor.g;
-      dustColors[i * 3 + 2] = particleColor.b;
     }
     
     // Create dense star clusters at various distances
@@ -364,9 +327,6 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       const clusterColors = new Float32Array(PARTICLES_PER_CLUSTER * 3);
       const clusterSizes = new Float32Array(PARTICLES_PER_CLUSTER);
       const clusterVelocities = new Float32Array(PARTICLES_PER_CLUSTER * 3);
-      
-      // Choose cluster color theme (primary, secondary, or accent)
-      const clusterColorBase = [colorTheme.primary, colorTheme.secondary, colorTheme.accent][c % 3];
       
       for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
         // Dense spherical distribution
@@ -388,22 +348,6 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         
         // Varied sizes within cluster
         clusterSizes[i] = 0.8 + Math.random() * 2.5;
-        
-        // Cluster color variation
-        const baseColor = new THREE.Color(clusterColorBase);
-        const hsl = { h: 0, s: 0, l: 0 };
-        baseColor.getHSL(hsl);
-        
-        const particleColor = new THREE.Color();
-        particleColor.setHSL(
-          (hsl.h + (Math.random() - 0.5) * 0.08 + 1) % 1,
-          Math.min(1, hsl.s * (0.7 + Math.random() * 0.6)),
-          Math.min(1, hsl.l * (0.5 + Math.random() * 0.5))
-        );
-        
-        clusterColors[i * 3] = particleColor.r;
-        clusterColors[i * 3 + 1] = particleColor.g;
-        clusterColors[i * 3 + 2] = particleColor.b;
       }
       
       clusterData.push({
@@ -433,6 +377,81 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       clusters: clusterData
     };
   }, []); // Remove dependencies to prevent recreation
+
+  // Update colors when theme changes
+  React.useEffect(() => {
+    if (!mainCloudRef.current || !dustCloudRef.current || !clustersRef.current) return;
+    
+    // Update main cloud colors
+    const mainColors = mainCloudRef.current.geometry.attributes.color.array as Float32Array;
+    for (let i = 0; i < particleData.main.count; i++) {
+      const baseColor = new THREE.Color(colorTheme.primary);
+      const hsl = { h: 0, s: 0, l: 0 };
+      baseColor.getHSL(hsl);
+      
+      const hueVariation = (Math.random() - 0.5) * 0.1;
+      const saturationVariation = 0.8 + Math.random() * 0.4;
+      const lightnessVariation = 0.3 + Math.random() * 0.7;
+      
+      const particleColor = new THREE.Color();
+      particleColor.setHSL(
+        (hsl.h + hueVariation + 1) % 1,
+        Math.min(1, hsl.s * saturationVariation),
+        Math.min(1, hsl.l * lightnessVariation)
+      );
+      
+      mainColors[i * 3] = particleColor.r;
+      mainColors[i * 3 + 1] = particleColor.g;
+      mainColors[i * 3 + 2] = particleColor.b;
+    }
+    mainCloudRef.current.geometry.attributes.color.needsUpdate = true;
+    
+    // Update dust cloud colors
+    const dustColors = dustCloudRef.current.geometry.attributes.color.array as Float32Array;
+    for (let i = 0; i < particleData.dust.count; i++) {
+      const baseColor = new THREE.Color(colorTheme.secondary);
+      const hsl = { h: 0, s: 0, l: 0 };
+      baseColor.getHSL(hsl);
+      
+      const particleColor = new THREE.Color();
+      particleColor.setHSL(
+        (hsl.h + (Math.random() - 0.5) * 0.15 + 1) % 1,
+        Math.min(1, hsl.s * (0.5 + Math.random() * 0.5)),
+        Math.min(1, hsl.l * (0.4 + Math.random() * 0.6))
+      );
+      
+      dustColors[i * 3] = particleColor.r;
+      dustColors[i * 3 + 1] = particleColor.g;
+      dustColors[i * 3 + 2] = particleColor.b;
+    }
+    dustCloudRef.current.geometry.attributes.color.needsUpdate = true;
+    
+    // Update cluster colors
+    clustersRef.current.children.forEach((cluster, clusterIndex) => {
+      if (cluster instanceof THREE.Points && clusterIndex < particleData.clusters.length) {
+        const clusterColors = cluster.geometry.attributes.color.array as Float32Array;
+        const clusterColorBase = [colorTheme.primary, colorTheme.secondary, colorTheme.accent][clusterIndex % 3];
+        
+        for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
+          const baseColor = new THREE.Color(clusterColorBase);
+          const hsl = { h: 0, s: 0, l: 0 };
+          baseColor.getHSL(hsl);
+          
+          const particleColor = new THREE.Color();
+          particleColor.setHSL(
+            (hsl.h + (Math.random() - 0.5) * 0.08 + 1) % 1,
+            Math.min(1, hsl.s * (0.7 + Math.random() * 0.6)),
+            Math.min(1, hsl.l * (0.5 + Math.random() * 0.5))
+          );
+          
+          clusterColors[i * 3] = particleColor.r;
+          clusterColors[i * 3 + 1] = particleColor.g;
+          clusterColors[i * 3 + 2] = particleColor.b;
+        }
+        cluster.geometry.attributes.color.needsUpdate = true;
+      }
+    });
+  }, [colorTheme, particleData]);
 
   // Advanced animation system with realistic stellar motion
   useFrame((state) => {
@@ -853,8 +872,8 @@ const SmartCameraControls: React.FC = () => {
   const { camera } = useThree();
   const isUserInteracting = useRef(false);
   const lastInteractionTime = useRef(0);
-  const continuousRotation = useRef({ theta: 0, phi: Math.PI / 2.5, radius: 15 });
-  const rotationSpeed = useRef(0.0001); // Base rotation speed
+  const rotationAngle = useRef(0);
+  const baseRadius = useRef(15);
   const isMobile = useIsMobile();
 
   useFrame((state) => {
@@ -863,24 +882,22 @@ const SmartCameraControls: React.FC = () => {
     const currentTime = Date.now();
     const timeSinceInteraction = currentTime - lastInteractionTime.current;
     
-    // Always rotate, but slow down during interaction
-    const shouldAutoRotate = !isUserInteracting.current || timeSinceInteraction > 500;
+    // Always rotate, but pause during active interaction
+    const shouldAutoRotate = !isUserInteracting.current || timeSinceInteraction > 1000;
     
     if (shouldAutoRotate || isMobile) {
-      // Update the continuous rotation
-      continuousRotation.current.theta += rotationSpeed.current;
+      // Continuous rotation around the scene
+      rotationAngle.current += 0.005; // Consistent rotation speed
       
-      // Add subtle height variation
-      const time = currentTime * 0.0001;
-      const heightVariation = Math.sin(time * 2) * 0.8;
+      // Calculate camera position in a circle around the scene
+      const radius = baseRadius.current;
+      const height = 5 + Math.sin(rotationAngle.current * 0.5) * 1; // Subtle height variation
       
-      // Apply the rotation to camera position
-      const { theta, phi, radius } = continuousRotation.current;
+      camera.position.x = Math.cos(rotationAngle.current) * radius;
+      camera.position.y = height;
+      camera.position.z = Math.sin(rotationAngle.current) * radius;
       
-      camera.position.x = radius * Math.sin(phi) * Math.cos(theta);
-      camera.position.y = radius * Math.cos(phi) + heightVariation;
-      camera.position.z = radius * Math.sin(phi) * Math.sin(theta);
-      
+      // Always look at the center of the scene
       camera.lookAt(0, 0, 0);
     }
     
@@ -896,7 +913,6 @@ const SmartCameraControls: React.FC = () => {
       if (!isMobile) {
         isUserInteracting.current = true;
         lastInteractionTime.current = Date.now();
-        rotationSpeed.current = 0.00003; // Slow down during interaction
       }
     };
 
@@ -905,19 +921,12 @@ const SmartCameraControls: React.FC = () => {
         isUserInteracting.current = false;
         lastInteractionTime.current = Date.now();
         
-        // Update continuous rotation to match current camera position
-        const spherical = new THREE.Spherical();
-        spherical.setFromVector3(camera.position);
-        continuousRotation.current = {
-          theta: spherical.theta,
-          phi: spherical.phi,
-          radius: spherical.radius
-        };
+        // Update rotation angle and radius based on where user left the camera
+        const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
+        baseRadius.current = Math.max(8, Math.min(25, distance)); // Clamp radius
         
-        // Resume normal rotation speed
-        setTimeout(() => {
-          rotationSpeed.current = 0.0001;
-        }, 1000);
+        // Calculate the current angle
+        rotationAngle.current = Math.atan2(camera.position.z, camera.position.x);
       }
     };
 
@@ -942,12 +951,11 @@ const SmartCameraControls: React.FC = () => {
     <OrbitControls
       ref={controlsRef}
       enablePan={false}
-      enableZoom={true}
+      enableZoom={false} // Disable zoom to prevent page scroll issues
       enableRotate={!isMobile}
       rotateSpeed={0.6}
-      zoomSpeed={0.4}
       minDistance={8}
-      maxDistance={30}
+      maxDistance={25}
       minPolarAngle={Math.PI / 8}
       maxPolarAngle={Math.PI - Math.PI / 8}
       enableDamping={true}
@@ -955,7 +963,7 @@ const SmartCameraControls: React.FC = () => {
       autoRotate={false}
       touches={{
         ONE: isMobile ? THREE.TOUCH.NONE : THREE.TOUCH.ROTATE,
-        TWO: isMobile ? THREE.TOUCH.NONE : THREE.TOUCH.DOLLY_PAN
+        TWO: THREE.TOUCH.NONE
       }}
     />
   );

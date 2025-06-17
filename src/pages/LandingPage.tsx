@@ -177,9 +177,9 @@ const LandingPage: React.FC = () => {
       {/* All content sections with proper z-index (lower than header) */}
       <div className="relative z-[5]">
         {/* Hero Section with WebGL Background ONLY */}
-        <div className="relative overflow-hidden min-h-[100vh] flex items-center">
+        <div className="relative overflow-hidden min-h-[100vh] flex items-center" style={{ pointerEvents: 'auto' }}>
           {/* WebGL Scene Background */}
-          <div className="absolute inset-0 w-full h-full z-[6]">
+          <div className="absolute inset-0 w-full h-full z-[6]" style={{ pointerEvents: 'auto' }}>
             <HeroScene onThemeChange={handleThemeChange} />
           </div>
           

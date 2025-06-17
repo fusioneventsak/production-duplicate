@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import * as THREE from 'three';
 
 // Particle color themes - matches HeroScene themes
-const PARTICLE_THEMES = [
+export const PARTICLE_THEMES = [
   { name: 'Purple Magic', primary: '#8b5cf6', secondary: '#a855f7', accent: '#c084fc' },
   { name: 'Ocean Breeze', primary: '#06b6d4', secondary: '#0891b2', accent: '#67e8f9' },
   { name: 'Sunset Glow', primary: '#f59e0b', secondary: '#d97706', accent: '#fbbf24' },
@@ -14,7 +14,7 @@ const PARTICLE_THEMES = [
   { name: 'Cosmic Red', primary: '#ef4444', secondary: '#dc2626', accent: '#fca5a5' }
 ];
 
-// Subtle particle system for landing page background
+// Enhanced particle system for landing page background
 interface SubtleParticleSystemProps {
   colorTheme: typeof PARTICLE_THEMES[0];
 }
@@ -23,11 +23,11 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
   const mainParticlesRef = useRef<THREE.Points>(null);
   const dustParticlesRef = useRef<THREE.Points>(null);
   
-  // Reduced particle counts for subtle effect
-  const MAIN_COUNT = 800;
-  const DUST_COUNT = 400;
+  // Increased particle counts for better visibility
+  const MAIN_COUNT = 1200;
+  const DUST_COUNT = 600;
   
-  // Create subtle particle distribution
+  // Create enhanced particle distribution
   const particleData = useMemo(() => {
     // Main particles - distributed across a large area
     const mainPositions = new Float32Array(MAIN_COUNT * 3);
@@ -36,37 +36,37 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
     const mainVelocities = new Float32Array(MAIN_COUNT * 3);
     
     for (let i = 0; i < MAIN_COUNT; i++) {
-      // Spread particles across a wide area
-      mainPositions[i * 3] = (Math.random() - 0.5) * 200; // x
-      mainPositions[i * 3 + 1] = Math.random() * 100 - 20; // y (some below viewport)
-      mainPositions[i * 3 + 2] = (Math.random() - 0.5) * 100; // z
+      // Spread particles across a very wide area to cover the entire page
+      mainPositions[i * 3] = (Math.random() - 0.5) * 300; // x - wider spread
+      mainPositions[i * 3 + 1] = Math.random() * 150 - 30; // y - taller coverage
+      mainPositions[i * 3 + 2] = (Math.random() - 0.5) * 150; // z - deeper
       
       // Very slow movement
-      mainVelocities[i * 3] = (Math.random() - 0.5) * 0.001;
-      mainVelocities[i * 3 + 1] = Math.random() * 0.002 + 0.0005; // gentle upward drift
-      mainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.001;
+      mainVelocities[i * 3] = (Math.random() - 0.5) * 0.002;
+      mainVelocities[i * 3 + 1] = Math.random() * 0.003 + 0.001; // gentle upward drift
+      mainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.002;
       
-      // Small, subtle sizes
-      mainSizes[i] = Math.random() * 0.8 + 0.2;
+      // Slightly larger sizes for better visibility
+      mainSizes[i] = Math.random() * 1.2 + 0.3;
     }
     
-    // Dust particles - even more subtle
+    // Dust particles - even more numerous for ambient effect
     const dustPositions = new Float32Array(DUST_COUNT * 3);
     const dustColors = new Float32Array(DUST_COUNT * 3);
     const dustSizes = new Float32Array(DUST_COUNT);
     const dustVelocities = new Float32Array(DUST_COUNT * 3);
     
     for (let i = 0; i < DUST_COUNT; i++) {
-      dustPositions[i * 3] = (Math.random() - 0.5) * 150;
-      dustPositions[i * 3 + 1] = Math.random() * 80 - 10;
-      dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 80;
+      dustPositions[i * 3] = (Math.random() - 0.5) * 250;
+      dustPositions[i * 3 + 1] = Math.random() * 120 - 20;
+      dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 120;
       
-      dustVelocities[i * 3] = (Math.random() - 0.5) * 0.0005;
-      dustVelocities[i * 3 + 1] = Math.random() * 0.001 + 0.0002;
-      dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.0005;
+      dustVelocities[i * 3] = (Math.random() - 0.5) * 0.001;
+      dustVelocities[i * 3 + 1] = Math.random() * 0.002 + 0.0005;
+      dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.001;
       
-      // Very small dust particles
-      dustSizes[i] = Math.random() * 0.4 + 0.1;
+      // Small but visible dust particles
+      dustSizes[i] = Math.random() * 0.6 + 0.2;
     }
     
     return {
@@ -102,7 +102,7 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
       particleColor.setHSL(
         (hsl.h + (Math.random() - 0.5) * 0.1 + 1) % 1,
         Math.min(1, hsl.s * (0.6 + Math.random() * 0.4)),
-        Math.min(1, hsl.l * (0.4 + Math.random() * 0.6))
+        Math.min(1, hsl.l * (0.5 + Math.random() * 0.6))
       );
       
       mainColors[i * 3] = particleColor.r;
@@ -121,8 +121,8 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
       const particleColor = new THREE.Color();
       particleColor.setHSL(
         (hsl.h + (Math.random() - 0.5) * 0.15 + 1) % 1,
-        Math.min(1, hsl.s * (0.3 + Math.random() * 0.5)),
-        Math.min(1, hsl.l * (0.2 + Math.random() * 0.4))
+        Math.min(1, hsl.s * (0.4 + Math.random() * 0.5)),
+        Math.min(1, hsl.l * (0.3 + Math.random() * 0.5))
       );
       
       dustColors[i * 3] = particleColor.r;
@@ -149,16 +149,16 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
         mainPositions[i3 + 2] += particleData.main.velocities[i3 + 2];
         
         // Add gentle floating motion
-        const floatFreq = time * 0.01 + i * 0.001;
-        mainPositions[i3] += Math.sin(floatFreq) * 0.0005;
-        mainPositions[i3 + 1] += Math.cos(floatFreq * 0.7) * 0.0003;
-        mainPositions[i3 + 2] += Math.sin(floatFreq * 1.3) * 0.0005;
+        const floatFreq = time * 0.015 + i * 0.001;
+        mainPositions[i3] += Math.sin(floatFreq) * 0.001;
+        mainPositions[i3 + 1] += Math.cos(floatFreq * 0.7) * 0.0008;
+        mainPositions[i3 + 2] += Math.sin(floatFreq * 1.3) * 0.001;
         
-        // Reset particles that drift too far up
-        if (mainPositions[i3 + 1] > 80) {
-          mainPositions[i3 + 1] = -20;
-          mainPositions[i3] = (Math.random() - 0.5) * 200;
-          mainPositions[i3 + 2] = (Math.random() - 0.5) * 100;
+        // Reset particles that drift too far up (taller reset zone)
+        if (mainPositions[i3 + 1] > 120) {
+          mainPositions[i3 + 1] = -30;
+          mainPositions[i3] = (Math.random() - 0.5) * 300;
+          mainPositions[i3 + 2] = (Math.random() - 0.5) * 150;
         }
       }
       
@@ -177,17 +177,17 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
         dustPositions[i3 + 1] += particleData.dust.velocities[i3 + 1];
         dustPositions[i3 + 2] += particleData.dust.velocities[i3 + 2];
         
-        // Add very subtle floating motion
-        const floatFreq = time * 0.008 + i * 0.002;
-        dustPositions[i3] += Math.sin(floatFreq) * 0.0003;
-        dustPositions[i3 + 1] += Math.cos(floatFreq * 0.9) * 0.0002;
-        dustPositions[i3 + 2] += Math.sin(floatFreq * 1.1) * 0.0003;
+        // Add subtle floating motion
+        const floatFreq = time * 0.012 + i * 0.002;
+        dustPositions[i3] += Math.sin(floatFreq) * 0.0008;
+        dustPositions[i3 + 1] += Math.cos(floatFreq * 0.9) * 0.0005;
+        dustPositions[i3 + 2] += Math.sin(floatFreq * 1.1) * 0.0008;
         
         // Reset dust particles that drift too far
-        if (dustPositions[i3 + 1] > 70) {
-          dustPositions[i3 + 1] = -15;
-          dustPositions[i3] = (Math.random() - 0.5) * 150;
-          dustPositions[i3 + 2] = (Math.random() - 0.5) * 80;
+        if (dustPositions[i3 + 1] > 100) {
+          dustPositions[i3 + 1] = -20;
+          dustPositions[i3] = (Math.random() - 0.5) * 250;
+          dustPositions[i3 + 2] = (Math.random() - 0.5) * 120;
         }
       }
       
@@ -197,7 +197,7 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
 
   return (
     <group>
-      {/* Main particles - subtle and sparse */}
+      {/* Main particles - more visible */}
       <points ref={mainParticlesRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -231,12 +231,12 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
             void main() {
               vColor = color;
               vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              gl_PointSize = size * (100.0 / -mvPosition.z);
+              gl_PointSize = size * (120.0 / -mvPosition.z);
               gl_Position = projectionMatrix * mvPosition;
               
-              // Distance-based opacity - very subtle
+              // Distance-based opacity - more visible
               float distance = length(mvPosition.xyz);
-              vOpacity = 1.0 - smoothstep(20.0, 80.0, distance);
+              vOpacity = 1.0 - smoothstep(30.0, 100.0, distance);
             }
           `}
           fragmentShader={`
@@ -246,18 +246,18 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
               float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
               if (distanceToCenter > 0.5) discard;
               
-              // Very soft falloff
+              // Soft falloff
               float alpha = 1.0 - (distanceToCenter * 2.0);
               alpha = smoothstep(0.0, 1.0, alpha);
               
-              // Very low opacity for subtlety
-              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.15);
+              // Increased opacity for better visibility
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.25);
             }
           `}
         />
       </points>
       
-      {/* Dust particles - even more subtle */}
+      {/* Dust particles - more ambient */}
       <points ref={dustParticlesRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -291,12 +291,12 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
             void main() {
               vColor = color;
               vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              gl_PointSize = size * (80.0 / -mvPosition.z);
+              gl_PointSize = size * (100.0 / -mvPosition.z);
               gl_Position = projectionMatrix * mvPosition;
               
               // Distance-based opacity for dust
               float distance = length(mvPosition.xyz);
-              vOpacity = 1.0 - smoothstep(15.0, 60.0, distance);
+              vOpacity = 1.0 - smoothstep(20.0, 80.0, distance);
             }
           `}
           fragmentShader={`
@@ -306,12 +306,12 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
               float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
               if (distanceToCenter > 0.5) discard;
               
-              // Very soft falloff for dust
+              // Soft falloff for dust
               float alpha = 1.0 - (distanceToCenter * 2.0);
               alpha = smoothstep(0.0, 1.0, alpha);
               
-              // Extremely low opacity for dust
-              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.08);
+              // Moderate opacity for dust visibility
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.15);
             }
           `}
         />
@@ -320,70 +320,23 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
   );
 };
 
-// Simple background gradient
-const SubtleGradientBackground: React.FC = () => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  
-  const gradientMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        colorTop: { value: new THREE.Color('#000000') },
-        colorMid: { value: new THREE.Color('#1a0a2e') },
-        colorBottom: { value: new THREE.Color('#000000') },
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 colorTop;
-        uniform vec3 colorMid;
-        uniform vec3 colorBottom;
-        varying vec2 vUv;
-        void main() {
-          vec3 color;
-          if (vUv.y > 0.7) {
-            color = colorTop;
-          } else if (vUv.y > 0.3) {
-            float factor = (vUv.y - 0.3) / 0.4;
-            color = mix(colorMid, colorTop, factor);
-          } else {
-            float factor = vUv.y / 0.3;
-            color = mix(colorBottom, colorMid, factor);
-          }
-          gl_FragColor = vec4(color, 1.0);
-        }
-      `,
-      side: THREE.BackSide,
-    });
-  }, []);
-
-  return (
-    <mesh ref={meshRef} material={gradientMaterial}>
-      <sphereGeometry args={[200, 32, 32]} />
-    </mesh>
-  );
-};
-
-// Main particle background component
+// Main particle background component - FIXED POSITIONING
 interface LandingParticleBackgroundProps {
   particleTheme: typeof PARTICLE_THEMES[0];
 }
 
-const LandingParticleBackground: React.FC<LandingParticleBackgroundProps> = ({ particleTheme }) => {
+export const LandingParticleBackground: React.FC<LandingParticleBackgroundProps> = ({ particleTheme }) => {
   return (
     <div 
-      className="fixed inset-0 w-full h-full -z-10"
+      className="fixed inset-0 w-full h-full pointer-events-none"
       style={{ 
+        zIndex: 1, // Changed from -z-10 to positive z-index
         pointerEvents: 'none',
         touchAction: 'none'
       }}
     >
       <Canvas
-        camera={{ position: [0, 0, 20], fov: 60 }}
+        camera={{ position: [0, 0, 30], fov: 75 }}
         gl={{ 
           antialias: true, 
           alpha: true,
@@ -395,19 +348,18 @@ const LandingParticleBackground: React.FC<LandingParticleBackgroundProps> = ({ p
         }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 0.8;
+          gl.toneMappingExposure = 1.0;
         }}
         frameloop="always"
         dpr={[1, 1.5]}
       >
         <Suspense fallback={null}>
-          <SubtleGradientBackground />
           <SubtleParticleSystem colorTheme={particleTheme} />
-          <fog attach="fog" args={['#0a0a0a', 30, 120]} />
+          {/* Subtle ambient lighting for particles */}
+          <ambientLight intensity={0.1} />
+          <pointLight position={[10, 10, 10]} intensity={0.05} />
         </Suspense>
       </Canvas>
     </div>
   );
 };
-
-export { LandingParticleBackground, PARTICLE_THEMES };

@@ -37,17 +37,17 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
     
     for (let i = 0; i < MAIN_COUNT; i++) {
       // Spread particles across a very wide area to cover the entire page
-      mainPositions[i * 3] = (Math.random() - 0.5) * 300; // x - wider spread
-      mainPositions[i * 3 + 1] = Math.random() * 150 - 30; // y - taller coverage
-      mainPositions[i * 3 + 2] = (Math.random() - 0.5) * 150; // z - deeper
+      mainPositions[i * 3] = (Math.random() - 0.5) * 100; // x - reduced spread to keep in view
+      mainPositions[i * 3 + 1] = (Math.random() - 0.5) * 60; // y - reduced height
+      mainPositions[i * 3 + 2] = (Math.random() - 0.5) * 60; // z - reduced depth
       
       // Very slow movement
-      mainVelocities[i * 3] = (Math.random() - 0.5) * 0.002;
-      mainVelocities[i * 3 + 1] = Math.random() * 0.003 + 0.001; // gentle upward drift
-      mainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.002;
+      mainVelocities[i * 3] = (Math.random() - 0.5) * 0.005;
+      mainVelocities[i * 3 + 1] = Math.random() * 0.008 + 0.002; // gentle upward drift
+      mainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.005;
       
-      // Slightly larger sizes for better visibility
-      mainSizes[i] = Math.random() * 1.2 + 0.3;
+      // Larger sizes for better visibility
+      mainSizes[i] = Math.random() * 2.0 + 0.5;
     }
     
     // Dust particles - even more numerous for ambient effect
@@ -57,16 +57,16 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
     const dustVelocities = new Float32Array(DUST_COUNT * 3);
     
     for (let i = 0; i < DUST_COUNT; i++) {
-      dustPositions[i * 3] = (Math.random() - 0.5) * 250;
-      dustPositions[i * 3 + 1] = Math.random() * 120 - 20;
-      dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 120;
+      dustPositions[i * 3] = (Math.random() - 0.5) * 80;
+      dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 40;
       
-      dustVelocities[i * 3] = (Math.random() - 0.5) * 0.001;
-      dustVelocities[i * 3 + 1] = Math.random() * 0.002 + 0.0005;
-      dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.001;
+      dustVelocities[i * 3] = (Math.random() - 0.5) * 0.003;
+      dustVelocities[i * 3 + 1] = Math.random() * 0.005 + 0.001;
+      dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.003;
       
-      // Small but visible dust particles
-      dustSizes[i] = Math.random() * 0.6 + 0.2;
+      // Larger dust particles
+      dustSizes[i] = Math.random() * 1.0 + 0.3;
     }
     
     return {
@@ -154,11 +154,11 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
         mainPositions[i3 + 1] += Math.cos(floatFreq * 0.7) * 0.0008;
         mainPositions[i3 + 2] += Math.sin(floatFreq * 1.3) * 0.001;
         
-        // Reset particles that drift too far up (taller reset zone)
-        if (mainPositions[i3 + 1] > 120) {
-          mainPositions[i3 + 1] = -30;
-          mainPositions[i3] = (Math.random() - 0.5) * 300;
-          mainPositions[i3 + 2] = (Math.random() - 0.5) * 150;
+        // Reset particles that drift too far up (smaller reset zone)
+        if (mainPositions[i3 + 1] > 40) {
+          mainPositions[i3 + 1] = -40;
+          mainPositions[i3] = (Math.random() - 0.5) * 100;
+          mainPositions[i3 + 2] = (Math.random() - 0.5) * 60;
         }
       }
       
@@ -184,10 +184,10 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
         dustPositions[i3 + 2] += Math.sin(floatFreq * 1.1) * 0.0008;
         
         // Reset dust particles that drift too far
-        if (dustPositions[i3 + 1] > 100) {
-          dustPositions[i3 + 1] = -20;
-          dustPositions[i3] = (Math.random() - 0.5) * 250;
-          dustPositions[i3 + 2] = (Math.random() - 0.5) * 120;
+        if (dustPositions[i3 + 1] > 30) {
+          dustPositions[i3 + 1] = -30;
+          dustPositions[i3] = (Math.random() - 0.5) * 80;
+          dustPositions[i3 + 2] = (Math.random() - 0.5) * 40;
         }
       }
       
@@ -231,12 +231,12 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
             void main() {
               vColor = color;
               vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              gl_PointSize = size * (120.0 / -mvPosition.z);
+              gl_PointSize = size * (300.0 / -mvPosition.z); // Much larger size multiplier
               gl_Position = projectionMatrix * mvPosition;
               
               // Distance-based opacity - more visible
               float distance = length(mvPosition.xyz);
-              vOpacity = 1.0 - smoothstep(30.0, 100.0, distance);
+              vOpacity = 1.0 - smoothstep(10.0, 50.0, distance); // Closer range
             }
           `}
           fragmentShader={`
@@ -250,8 +250,8 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
               float alpha = 1.0 - (distanceToCenter * 2.0);
               alpha = smoothstep(0.0, 1.0, alpha);
               
-              // Increased opacity for better visibility
-              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.4);
+              // Much higher opacity for visibility
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.8);
             }
           `}
         />
@@ -291,12 +291,12 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
             void main() {
               vColor = color;
               vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-              gl_PointSize = size * (100.0 / -mvPosition.z);
+              gl_PointSize = size * (200.0 / -mvPosition.z); // Larger dust particles
               gl_Position = projectionMatrix * mvPosition;
               
               // Distance-based opacity for dust
               float distance = length(mvPosition.xyz);
-              vOpacity = 1.0 - smoothstep(20.0, 80.0, distance);
+              vOpacity = 1.0 - smoothstep(8.0, 40.0, distance); // Closer range
             }
           `}
           fragmentShader={`
@@ -310,18 +310,30 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
               float alpha = 1.0 - (distanceToCenter * 2.0);
               alpha = smoothstep(0.0, 1.0, alpha);
               
-              // Increased opacity for dust visibility
-              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.25);
+              // Higher opacity for dust visibility
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.6);
             }
           `}
         />
       </points>
       
-      {/* DEBUG: Add a visible test particle to verify rendering */}
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.1, 8, 8]} />
-        <meshBasicMaterial color="#ff0000" transparent opacity={0.8} />
-      </mesh>
+      {/* Test: Add some simple visible particles to verify system works */}
+      <group>
+        {Array.from({ length: 50 }, (_, i) => (
+          <mesh key={i} position={[
+            (Math.random() - 0.5) * 40,
+            (Math.random() - 0.5) * 20,
+            (Math.random() - 0.5) * 20
+          ]}>
+            <sphereGeometry args={[0.02, 8, 8]} />
+            <meshBasicMaterial 
+              color={particleTheme.primary} 
+              transparent 
+              opacity={0.6}
+            />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 };

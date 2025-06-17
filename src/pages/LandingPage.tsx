@@ -5,7 +5,7 @@ import HeroScene from '../components/three/HeroScene';
 import { LandingParticleBackground, PARTICLE_THEMES } from '../components/three/LandingParticleBackground';
 import { ArrowRight, Camera, CloudCog, Share2, ShieldCheck, Mail, Phone } from 'lucide-react';
 
-// DemoRequestModal component (keeping your existing modal)
+// DemoRequestModal component
 const DemoRequestModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -70,7 +70,7 @@ const DemoRequestModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         <div 
           className="fixed inset-0 transition-opacity bg-black bg-opacity-75 backdrop-blur-sm"
           onClick={onClose}
-        ></div>
+        />
         <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-gray-900 border border-gray-700 shadow-xl rounded-2xl sm:max-w-lg">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-bold text-white">Request Demo</h3>
@@ -83,8 +83,7 @@ const DemoRequestModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
               <p className="text-green-400 text-center">Thank you! We'll contact you soon to schedule your demo.</p>
             </div>
           )}
-          <div onSubmit={handleSubmit} className="space-y-4">
-            <input type="hidden" name="form-name" value="demo-request" />
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
               <input
@@ -143,7 +142,7 @@ const DemoRequestModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
               />
             </div>
             <button
-              type="submit"
+              onClick={handleSubmit}
               disabled={isSubmitting || submitStatus === 'success'}
               className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 disabled:opacity-50 text-white font-medium rounded-lg transition-all duration-200"
             >
@@ -152,7 +151,7 @@ const DemoRequestModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
             <p className="text-xs text-gray-400 text-center">
               We'll contact you within 24 hours to schedule your personalized demo.
             </p>
-          </form>
+          </div>
         </div>
       </div>
     </div>
@@ -309,7 +308,7 @@ const LandingPage: React.FC = () => {
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
-                ></iframe>
+                />
               </div>
               <div className="text-center">
                 <h3 className="text-2xl font-semibold text-white mb-2">See It In Action</h3>
@@ -529,8 +528,7 @@ const LandingPage: React.FC = () => {
                           {/* Grid Lines */}
                           <div className="absolute inset-0 opacity-10">
                             <div className="w-full h-full" style={{
-                              backgroundImage: `linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
-                                               linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)`,
+                              backgroundImage: `linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)`,
                               backgroundSize: '15px 15px'
                             }}></div>
                           </div>

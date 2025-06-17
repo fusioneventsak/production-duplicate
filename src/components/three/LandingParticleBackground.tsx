@@ -327,7 +327,7 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
           ]}>
             <sphereGeometry args={[0.02, 8, 8]} />
             <meshBasicMaterial 
-              color={particleTheme.primary} 
+              color={colorTheme.primary} 
               transparent 
               opacity={0.6}
             />

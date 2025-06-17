@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Suspense } from 'react';
 import * as THREE from 'three';
+import { Palette } from 'lucide-react';
 
 // Mobile detection hook
 const useIsMobile = () => {
@@ -73,61 +74,9 @@ const DEMO_PHOTOS = [
   'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=400&h=600&fit=crop&crop=center', // group selfie
   'https://images.unsplash.com/photo-1592650450938-4d8b4b8c7c3b?w=400&h=600&fit=crop&crop=center', // celebration
   'https://images.unsplash.com/photo-1594736797933-d0401ba5f9e4?w=400&h=600&fit=crop&crop=center', // party fun
-  // Additional 50 party photos to reach 100 total
-  'https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1600298881974-6be191ceeda1?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1601933470096-0e67b2e3c796?w=400&h=600&fit=crop&crop=center', // group selfie
-  'https://images.unsplash.com/photo-1603186921213-d2ca7c207b89?w=400&h=600&fit=crop&crop=center', // party fun
-  'https://images.unsplash.com/photo-1604594849809-dfedbc827105?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=400&h=600&fit=crop&crop=center', // party celebration
-  'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=400&h=600&fit=crop&crop=center', // food celebration
-  'https://images.unsplash.com/photo-1607962837359-5e7e89f86776?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1609086814533-1e3b8f28c81c?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1610216705422-caa3fcb6d158?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1611348586804-61bf6c080437?w=400&h=600&fit=crop&crop=center', // party fun
-  'https://images.unsplash.com/photo-1612472324236-8bd67c8cb2c4?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1613603346037-62ee778e0b1f?w=400&h=600&fit=crop&crop=center', // group selfie
-  'https://images.unsplash.com/photo-1614628486389-6cbbda8ff4cf?w=400&h=600&fit=crop&crop=center', // party celebration
-  'https://images.unsplash.com/photo-1615751072497-5f5169febe17?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1616781382395-1e18e4fcb7b0?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1617854818583-09e7f077a156?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1618932260643-eee4a2f652a6?w=400&h=600&fit=crop&crop=center', // party fun
-  'https://images.unsplash.com/photo-1619985240536-f64b035ce2c1?w=400&h=600&fit=crop&crop=center', // group selfie
-  'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400&h=600&fit=crop&crop=center', // party celebration
-  'https://images.unsplash.com/photo-1622037576898-d710baf8fd2b?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1623071379464-7a9f5bb0736c?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1624165008446-83877d7f7b2d?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1625225233840-695456021cde?w=400&h=600&fit=crop&crop=center', // party fun
-  'https://images.unsplash.com/photo-1626284648318-1b6c7c4e3a7f?w=400&h=600&fit=crop&crop=center', // group selfie
-  'https://images.unsplash.com/photo-1627308595229-7830a5c91f9f?w=400&h=600&fit=crop&crop=center', // party celebration
-  'https://images.unsplash.com/photo-1628367726634-ad8e8391c5d2?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1629398550148-fb59e76d8b1e?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1630457619827-e4b8b6c15a45?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1631518178077-5a9ba7969e95?w=400&h=600&fit=crop&crop=center', // party fun
-  'https://images.unsplash.com/photo-1632577846987-c9d4c3e8b3d6?w=400&h=600&fit=crop&crop=center', // group selfie
-  'https://images.unsplash.com/photo-1633608678846-c5b9e9b8b3d7?w=400&h=600&fit=crop&crop=center', // party celebration
-  'https://images.unsplash.com/photo-1634638877954-e5b9e9b8b3d8?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1635699008876-f5b9e9b8b3d9?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1636759104897-g6c0e0b8b3da?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1637819195918-h7d1f1b8b3db?w=400&h=600&fit=crop&crop=center', // party fun
-  'https://images.unsplash.com/photo-1638880286939-i8e2g2b8b3dc?w=400&h=600&fit=crop&crop=center', // group selfie
-  'https://images.unsplash.com/photo-1639940397960-j9f3h3b8b3dd?w=400&h=600&fit=crop&crop=center', // party celebration
-  'https://images.unsplash.com/photo-1641000508981-k0g4i4b8b3de?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1642060620002-l1h5j5b8b3df?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1643120731023-m2i6k6b8b3e0?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1644180842044-n3j7l7b8b3e1?w=400&h=600&fit=crop&crop=center', // party fun
-  'https://images.unsplash.com/photo-1645240953065-o4k8m8b8b3e2?w=400&h=600&fit=crop&crop=center', // group selfie
-  'https://images.unsplash.com/photo-1646301064086-p5l9n9b8b3e3?w=400&h=600&fit=crop&crop=center', // party celebration
-  'https://images.unsplash.com/photo-1647361175107-q6m0o0b8b3e4?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1648421286128-r7n1p1b8b3e5?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1649481397149-s8o2q2b8b3e6?w=400&h=600&fit=crop&crop=center', // celebration
-  'https://images.unsplash.com/photo-1650541508170-t9p3r3b8b3e7?w=400&h=600&fit=crop&crop=center', // party fun
-  'https://images.unsplash.com/photo-1651601619191-u0q4s4b8b3e8?w=400&h=600&fit=crop&crop=center', // group selfie
-  'https://images.unsplash.com/photo-1652661730212-v1r5t5b8b3e9?w=400&h=600&fit=crop&crop=center', // party celebration
-  'https://images.unsplash.com/photo-1653721841233-w2s6u6b8b3ea?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1654781952254-x3t7v7b8b3eb?w=400&h=600&fit=crop&crop=center', // party dancing
-  'https://images.unsplash.com/photo-1655842063275-y4u8w8b8b3ec?w=400&h=600&fit=crop&crop=center', // celebration
+  // Additional photos to reach 100 total
+  'https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=400&h=600&fit=crop&crop=center',
+  'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&h=600&fit=crop&crop=center'
 ];
 
 // Fun comments that might appear on photos in a real collage
@@ -144,6 +93,17 @@ const PHOTO_COMMENTS = [
   "So happy right now! 😊",
   "Unforgettable! 🙌",
   "Living our best life! 💃"
+];
+
+// Particle color themes
+const PARTICLE_THEMES = [
+  { name: 'Purple Magic', primary: '#8b5cf6', secondary: '#a855f7', accent: '#c084fc' },
+  { name: 'Ocean Breeze', primary: '#06b6d4', secondary: '#0891b2', accent: '#67e8f9' },
+  { name: 'Sunset Glow', primary: '#f59e0b', secondary: '#d97706', accent: '#fbbf24' },
+  { name: 'Forest Dream', primary: '#10b981', secondary: '#059669', accent: '#34d399' },
+  { name: 'Rose Petals', primary: '#ec4899', secondary: '#db2777', accent: '#f9a8d4' },
+  { name: 'Electric Blue', primary: '#3b82f6', secondary: '#2563eb', accent: '#93c5fd' },
+  { name: 'Cosmic Red', primary: '#ef4444', secondary: '#dc2626', accent: '#fca5a5' }
 ];
 
 interface PhotoProps {
@@ -181,7 +141,6 @@ const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, ind
       undefined,
       (error) => {
         console.warn('Failed to load texture:', imageUrl, error);
-        // Don't set isLoaded to true if failed - photo won't render
         setIsLoaded(false);
       }
     );
@@ -198,16 +157,13 @@ const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, ind
     canvas.width = 512;
     canvas.height = 128;
     
-    // Clear canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw rounded rectangle background
     context.fillStyle = 'rgba(0, 0, 0, 0.8)';
     context.beginPath();
     context.roundRect(10, 10, canvas.width - 20, canvas.height - 20, 15);
     context.fill();
     
-    // Draw text
     context.fillStyle = 'white';
     context.font = 'bold 28px Arial, sans-serif';
     context.textAlign = 'center';
@@ -224,28 +180,22 @@ const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, ind
     if (!groupRef.current) return;
     
     const time = state.clock.getElapsedTime();
-    
-    // Floating animation with different frequencies for each photo
     const floatOffset = Math.sin(time * 0.5 + index * 0.5) * 0.3;
     
-    // Make the entire group (photo + text) face the camera
     groupRef.current.lookAt(state.camera.position);
     
-    // Add subtle rotation variation while still facing camera
     const rotationOffset = Math.sin(time * 0.3 + index * 0.3) * 0.05;
     groupRef.current.rotation.z += rotationOffset;
     
     groupRef.current.position.y = position[1] + floatOffset;
   });
 
-  // Only render if photo loaded successfully AND has texture
   if (!isLoaded || !texture) {
     return null;
   }
 
   return (
     <group ref={groupRef} position={position} rotation={rotation}>
-      {/* Main photo - enhanced materials for rich, vibrant appearance */}
       <mesh>
         <planeGeometry args={[1.4, 2.1]} />
         <meshStandardMaterial 
@@ -262,7 +212,6 @@ const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, ind
         />
       </mesh>
       
-      {/* Comment text overlay - attached to photo, same width as photo */}
       {comment && textTexture && (
         <mesh position={[0, -1.2, 0.01]}>
           <planeGeometry args={[1.4, 0.35]} />
@@ -277,47 +226,225 @@ const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, ind
   );
 };
 
-const ParticleSystem: React.FC = () => {
+interface EnhancedParticleSystemProps {
+  colorTheme: typeof PARTICLE_THEMES[0];
+  photoPositions: Array<{ position: [number, number, number] }>;
+}
+
+const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTheme, photoPositions }) => {
   const pointsRef = useRef<THREE.Points>(null);
+  const glowPointsRef = useRef<THREE.Points>(null);
   
-  const particles = useMemo(() => {
-    const count = 150;
-    const positions = new Float32Array(count * 3);
+  const particleData = useMemo(() => {
+    const baseCount = 200;
+    const photoParticleCount = photoPositions.length * 3; // 3 particles per photo
+    const totalCount = baseCount + photoParticleCount;
     
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 25;
-      positions[i * 3 + 1] = Math.random() * 15 + 2;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 15;
+    const positions = new Float32Array(totalCount * 3);
+    const velocities = new Float32Array(totalCount * 3);
+    const sizes = new Float32Array(totalCount);
+    const opacities = new Float32Array(totalCount);
+    
+    let index = 0;
+    
+    // Base ambient particles
+    for (let i = 0; i < baseCount; i++) {
+      positions[index * 3] = (Math.random() - 0.5) * 40;
+      positions[index * 3 + 1] = Math.random() * 20 + 2;
+      positions[index * 3 + 2] = (Math.random() - 0.5) * 40;
+      
+      velocities[index * 3] = (Math.random() - 0.5) * 0.02;
+      velocities[index * 3 + 1] = Math.random() * 0.01 + 0.005;
+      velocities[index * 3 + 2] = (Math.random() - 0.5) * 0.02;
+      
+      sizes[index] = Math.random() * 0.8 + 0.4;
+      opacities[index] = Math.random() * 0.6 + 0.2;
+      
+      index++;
     }
     
-    return positions;
-  }, []);
+    // Photo-specific particles
+    photoPositions.forEach((photo) => {
+      for (let i = 0; i < 3; i++) {
+        const offsetX = (Math.random() - 0.5) * 4;
+        const offsetY = Math.random() * 3 + 1;
+        const offsetZ = (Math.random() - 0.5) * 4;
+        
+        positions[index * 3] = photo.position[0] + offsetX;
+        positions[index * 3 + 1] = photo.position[1] + offsetY;
+        positions[index * 3 + 2] = photo.position[2] + offsetZ;
+        
+        velocities[index * 3] = (Math.random() - 0.5) * 0.01;
+        velocities[index * 3 + 1] = Math.random() * 0.02 + 0.01;
+        velocities[index * 3 + 2] = (Math.random() - 0.5) * 0.01;
+        
+        sizes[index] = Math.random() * 1.2 + 0.6;
+        opacities[index] = Math.random() * 0.8 + 0.4;
+        
+        index++;
+      }
+    });
+    
+    return {
+      positions,
+      velocities,
+      sizes,
+      opacities,
+      count: totalCount
+    };
+  }, [photoPositions]);
 
   useFrame((state) => {
-    if (!pointsRef.current) return;
+    if (!pointsRef.current || !glowPointsRef.current) return;
     
     const time = state.clock.getElapsedTime();
-    pointsRef.current.rotation.y = time * 0.03;
+    const positionArray = pointsRef.current.geometry.attributes.position.array as Float32Array;
+    const glowPositionArray = glowPointsRef.current.geometry.attributes.position.array as Float32Array;
+    
+    for (let i = 0; i < particleData.count; i++) {
+      const i3 = i * 3;
+      
+      // Apply velocity
+      positionArray[i3] += particleData.velocities[i3];
+      positionArray[i3 + 1] += particleData.velocities[i3 + 1];
+      positionArray[i3 + 2] += particleData.velocities[i3 + 2];
+      
+      // Add wave motion
+      positionArray[i3] += Math.sin(time * 0.5 + i * 0.1) * 0.002;
+      positionArray[i3 + 1] += Math.cos(time * 0.3 + i * 0.05) * 0.001;
+      
+      // Reset particles that go too high
+      if (positionArray[i3 + 1] > 25) {
+        positionArray[i3 + 1] = -5;
+        positionArray[i3] = (Math.random() - 0.5) * 40;
+        positionArray[i3 + 2] = (Math.random() - 0.5) * 40;
+      }
+      
+      // Copy to glow particles with slight offset
+      glowPositionArray[i3] = positionArray[i3];
+      glowPositionArray[i3 + 1] = positionArray[i3 + 1];
+      glowPositionArray[i3 + 2] = positionArray[i3 + 2];
+    }
+    
+    pointsRef.current.geometry.attributes.position.needsUpdate = true;
+    glowPointsRef.current.geometry.attributes.position.needsUpdate = true;
+    
+    // Gentle rotation
+    pointsRef.current.rotation.y = time * 0.02;
+    glowPointsRef.current.rotation.y = time * 0.02;
   });
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          array={particles}
-          count={particles.length / 3}
-          itemSize={3}
+    <group>
+      {/* Main particles */}
+      <points ref={pointsRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            array={particleData.positions}
+            count={particleData.count}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-size"
+            array={particleData.sizes}
+            count={particleData.count}
+            itemSize={1}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color={colorTheme.primary}
+          size={0.6}
+          transparent
+          opacity={0.7}
+          sizeAttenuation
+          vertexColors={false}
         />
-      </bufferGeometry>
-      <pointsMaterial
-        color="#8b5cf6"
-        size={0.015}
-        transparent
-        opacity={0.4}
-        sizeAttenuation
-      />
-    </points>
+      </points>
+      
+      {/* Glow effect particles */}
+      <points ref={glowPointsRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            array={particleData.positions}
+            count={particleData.count}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          color={colorTheme.accent}
+          size={1.2}
+          transparent
+          opacity={0.3}
+          sizeAttenuation
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+    </group>
+  );
+};
+
+// Particle Theme Selector Button
+interface ParticleControlsProps {
+  currentTheme: typeof PARTICLE_THEMES[0];
+  onThemeChange: (theme: typeof PARTICLE_THEMES[0]) => void;
+}
+
+const ParticleControls: React.FC<ParticleControlsProps> = ({ currentTheme, onThemeChange }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <div className="fixed top-4 right-4 z-50">
+      <div className="relative">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 px-4 py-2 bg-black/20 backdrop-blur-md border border-white/10 rounded-lg text-white hover:bg-black/30 transition-all duration-200 shadow-lg"
+          aria-label="Change particle colors"
+        >
+          <Palette size={20} />
+          <span className="hidden sm:inline">Particles</span>
+        </button>
+        
+        {isOpen && (
+          <div className="absolute top-full right-0 mt-2 bg-black/80 backdrop-blur-md border border-white/10 rounded-lg p-3 min-w-48 shadow-xl">
+            <h3 className="text-sm font-medium text-white/80 mb-2">Particle Theme</h3>
+            <div className="space-y-2">
+              {PARTICLE_THEMES.map((theme) => (
+                <button
+                  key={theme.name}
+                  onClick={() => {
+                    onThemeChange(theme);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 p-2 rounded-md transition-all duration-200 ${
+                    currentTheme.name === theme.name 
+                      ? 'bg-white/20 border border-white/20' 
+                      : 'hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex gap-1">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.primary }}
+                    />
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.secondary }}
+                    />
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.accent }}
+                    />
+                  </div>
+                  <span className="text-sm text-white/90">{theme.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
@@ -376,9 +503,9 @@ const GradientBackground: React.FC = () => {
   const gradientMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
-        colorTop: { value: new THREE.Color('#000000') }, // Pure black at top
-        colorMid: { value: new THREE.Color('#4c1d95') }, // Royal purple mid
-        colorBottom: { value: new THREE.Color('#000000') }, // Black at bottom
+        colorTop: { value: new THREE.Color('#000000') },
+        colorMid: { value: new THREE.Color('#4c1d95') },
+        colorBottom: { value: new THREE.Color('#000000') },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -395,14 +522,11 @@ const GradientBackground: React.FC = () => {
         void main() {
           vec3 color;
           if (vUv.y > 0.6) {
-            // Top 40%: pure black
             color = colorTop;
           } else if (vUv.y > 0.3) {
-            // Middle 30%: blend from royal purple to black
             float factor = (vUv.y - 0.3) / 0.3;
             color = mix(colorMid, colorTop, factor);
           } else {
-            // Bottom 30%: blend from black to royal purple
             float factor = vUv.y / 0.3;
             color = mix(colorBottom, colorMid, factor);
           }
@@ -432,21 +556,17 @@ const AutoRotatingCamera: React.FC = () => {
     if (!controlsRef.current) return;
     
     const currentTime = Date.now();
-    const time = currentTime * 0.0001; // Much slower for smooth rotation
+    const time = currentTime * 0.0001;
     
-    // If user isn't interacting (or on mobile where interaction is disabled), apply smooth rotation
     if (!isUserInteracting.current || isMobile) {
-      const radius = 15; // Fixed distance, further from photos
-      const heightBase = 5; // Base height
-      const heightVariation = 1; // Subtle height change
+      const radius = 15;
+      const heightBase = 5;
+      const heightVariation = 1;
       
-      // Simple circular rotation
       camera.position.x = radius * Math.cos(time);
       camera.position.z = radius * Math.sin(time);
-      // Gentle height variation
       camera.position.y = heightBase + Math.sin(time * 2) * heightVariation;
       
-      // Always look at the center
       camera.lookAt(0, 0, 0);
     }
     
@@ -459,7 +579,7 @@ const AutoRotatingCamera: React.FC = () => {
     const controls = controlsRef.current;
     
     const handleStart = () => {
-      if (!isMobile) { // Only allow interaction on desktop
+      if (!isMobile) {
         isUserInteracting.current = true;
         lastInteractionTime.current = Date.now();
       }
@@ -486,7 +606,7 @@ const AutoRotatingCamera: React.FC = () => {
       ref={controlsRef}
       enablePan={false}
       enableZoom={false}
-      enableRotate={!isMobile} // Disable rotation on mobile
+      enableRotate={!isMobile}
       rotateSpeed={0.5}
       minDistance={12}
       maxDistance={18}
@@ -495,7 +615,6 @@ const AutoRotatingCamera: React.FC = () => {
       enableDamping={true}
       dampingFactor={0.05}
       autoRotate={false}
-      // Disable touch controls on mobile
       touches={{
         ONE: isMobile ? THREE.TOUCH.NONE : THREE.TOUCH.ROTATE,
         TWO: THREE.TOUCH.NONE
@@ -504,8 +623,7 @@ const AutoRotatingCamera: React.FC = () => {
   );
 };
 
-const Scene: React.FC = () => {
-  // Generate photo positions for 100 photos covering the entire floor plane
+const Scene: React.FC<{ particleTheme: typeof PARTICLE_THEMES[0] }> = ({ particleTheme }) => {
   const photoPositions = useMemo(() => {
     const positions: Array<{
       position: [number, number, number];
@@ -513,36 +631,29 @@ const Scene: React.FC = () => {
       imageUrl: string;
     }> = [];
 
-    // Floor is 35x35 units, we want to cover it evenly
-    // Let's create a 10x10 grid to get exactly 100 photos
     const gridSize = 10;
-    const floorSize = 30; // Slightly smaller than floor to have margin
-    const spacing = floorSize / (gridSize - 1); // Even spacing
+    const floorSize = 30;
+    const spacing = floorSize / (gridSize - 1);
     
     let photoIndex = 0;
     
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
-        // Calculate position to center the grid on the floor
         const x = (col - (gridSize - 1) / 2) * spacing;
         const z = (row - (gridSize - 1) / 2) * spacing;
         
-        // Add small random offset for organic feel (but keep photos in their grid positions)
         const xOffset = (Math.random() - 0.5) * 0.5;
         const zOffset = (Math.random() - 0.5) * 0.5;
         
-        // Vary height in a wave pattern across the grid
         const baseHeight = 1.5;
         const waveHeight = Math.sin(row * 0.3) * Math.cos(col * 0.3) * 1.5;
         const randomHeight = Math.random() * 0.8;
         const y = baseHeight + waveHeight + randomHeight;
         
-        // Random rotations for natural look
         const rotationX = (Math.random() - 0.5) * 0.3;
         const rotationY = (Math.random() - 0.5) * 0.6;
         const rotationZ = (Math.random() - 0.5) * 0.2;
         
-        // Cycle through party photos
         const imageUrl = DEMO_PHOTOS[photoIndex % DEMO_PHOTOS.length];
         photoIndex++;
         
@@ -554,106 +665,31 @@ const Scene: React.FC = () => {
       }
     }
     
-    console.log(`Generated ${positions.length} photo positions in ${gridSize}x${gridSize} grid`);
     return positions;
   }, []);
 
   return (
     <>
-      {/* Gradient Background Sphere */}
       <GradientBackground />
       
-      {/* ENHANCED LIGHTING SETUP - Complete coverage with no dark spots */}
-      
-      {/* Strong ambient light base - ensures minimum brightness everywhere */}
+      {/* Enhanced lighting setup */}
       <ambientLight intensity={0.4} color="#ffffff" />
+      <directionalLight position={[5, 10, 5]} intensity={0.5} color="#ffffff" castShadow={false} />
+      <directionalLight position={[-5, 8, -5]} intensity={0.4} color="#ffffff" castShadow={false} />
+      <directionalLight position={[0, 12, -8]} intensity={0.3} color="#ffffff" castShadow={false} />
+      <directionalLight position={[5, 2, 5]} intensity={0.25} color="#ffffff" castShadow={false} />
+      <directionalLight position={[-5, 2, -5]} intensity={0.25} color="#ffffff" castShadow={false} />
+      <directionalLight position={[10, 5, 0]} intensity={0.2} color="#ffffff" castShadow={false} />
+      <directionalLight position={[-10, 5, 0]} intensity={0.2} color="#ffffff" castShadow={false} />
+      <directionalLight position={[0, 5, 10]} intensity={0.25} color="#ffffff" castShadow={false} />
       
-      {/* Key Light - Main directional light from above */}
-      <directionalLight
-        position={[5, 10, 5]}
-        intensity={0.5}
-        color="#ffffff"
-        castShadow={false}
-      />
-      
-      {/* Fill Light - Opposite side to key light */}
-      <directionalLight
-        position={[-5, 8, -5]}
-        intensity={0.4}
-        color="#ffffff"
-        castShadow={false}
-      />
-      
-      {/* Rim Light - Back lighting for depth */}
-      <directionalLight
-        position={[0, 12, -8]}
-        intensity={0.3}
-        color="#ffffff"
-        castShadow={false}
-      />
-      
-      {/* Bottom Fill Lights - Eliminate shadows underneath */}
-      <directionalLight
-        position={[5, 2, 5]}
-        intensity={0.25}
-        color="#ffffff"
-        castShadow={false}
-      />
-      
-      <directionalLight
-        position={[-5, 2, -5]}
-        intensity={0.25}
-        color="#ffffff"
-        castShadow={false}
-      />
-      
-      {/* Side Lights - Ensure no dark sides */}
-      <directionalLight
-        position={[10, 5, 0]}
-        intensity={0.2}
-        color="#ffffff"
-        castShadow={false}
-      />
-      
-      <directionalLight
-        position={[-10, 5, 0]}
-        intensity={0.2}
-        color="#ffffff"
-        castShadow={false}
-      />
-      
-      {/* Front Lights - Illuminate photos facing camera */}
-      <directionalLight
-        position={[0, 5, 10]}
-        intensity={0.25}
-        color="#ffffff"
-        castShadow={false}
-      />
-      
-      {/* Point Lights for localized brightness boost */}
-      <pointLight 
-        position={[0, 6, 0]} 
-        intensity={0.3} 
-        color="#ffffff" 
-        distance={20}
-        decay={2}
-      />
-      
-      <pointLight 
-        position={[0, 1, 6]} 
-        intensity={0.2} 
-        color="#ffffff" 
-        distance={15}
-        decay={2}
-      />
-      
-      {/* Additional ring of lights around the scene */}
+      <pointLight position={[0, 6, 0]} intensity={0.3} color="#ffffff" distance={20} decay={2} />
+      <pointLight position={[0, 1, 6]} intensity={0.2} color="#ffffff" distance={15} decay={2} />
       <pointLight position={[8, 4, 0]} intensity={0.2} color="#ffffff" distance={12} />
       <pointLight position={[-8, 4, 0]} intensity={0.2} color="#ffffff" distance={12} />
       <pointLight position={[0, 4, 8]} intensity={0.2} color="#ffffff" distance={12} />
       <pointLight position={[0, 4, -8]} intensity={0.2} color="#ffffff" distance={12} />
       
-      {/* Purple accent lights for atmosphere (reduced intensity) */}
       <spotLight
         position={[-8, 12, -8]}
         angle={Math.PI / 4}
@@ -672,16 +708,14 @@ const Scene: React.FC = () => {
         castShadow={false}
       />
       
-      {/* Interactive Auto-Rotating Camera Controls */}
       <AutoRotatingCamera />
       
-      {/* Reflective Floor and Grid */}
       <ReflectiveFloor />
       <Floor />
       <Grid />
       
-      {/* Particle System */}
-      <ParticleSystem />
+      {/* Enhanced Particle System */}
+      <EnhancedParticleSystem colorTheme={particleTheme} photoPositions={photoPositions} />
       
       {/* Floating Photos */}
       {photoPositions.map((photo, index) => (
@@ -694,7 +728,6 @@ const Scene: React.FC = () => {
         />
       ))}
       
-      {/* Enhanced fog for more dramatic atmosphere */}
       <fog attach="fog" args={['#1a0a2e', 15, 35]} />
     </>
   );
@@ -731,29 +764,54 @@ const LoadingFallback: React.FC = () => (
 );
 
 const HeroScene: React.FC = () => {
+  const [particleTheme, setParticleTheme] = React.useState(PARTICLE_THEMES[0]);
+
   return (
     <ErrorBoundary>
-      {/* Mobile: pointer-events-none, Desktop: pointer-events-auto */}
-      <div className="absolute inset-0 w-full h-full pointer-events-none md:pointer-events-auto">
-        <Canvas
-          camera={{ position: [15, 5, 15], fov: 45 }}
-          shadows={false}
-          gl={{ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: "high-performance"
-          }}
-          style={{ background: 'transparent' }}
-          onCreated={({ gl }) => {
-            gl.shadowMap.enabled = false;
-            gl.toneMapping = THREE.ACESFilmicToneMapping;
-            gl.toneMappingExposure = 1.2; // Reduced to prevent overexposure
+      {/* CRITICAL: Fixed mobile scrolling by ensuring pointer-events are properly controlled */}
+      <div className="absolute inset-0 w-full h-full">
+        {/* Interactive particle controls - always pointer-events-auto */}
+        <ParticleControls 
+          currentTheme={particleTheme} 
+          onThemeChange={setParticleTheme} 
+        />
+        
+        {/* Canvas with improved mobile handling */}
+        <div 
+          className="w-full h-full touch-pan-y" 
+          style={{ 
+            // CRITICAL: Allow mobile scrolling by preventing canvas from capturing touch events
+            touchAction: 'pan-y',
+            // On mobile, disable pointer events to allow scroll
+            pointerEvents: window.innerWidth < 768 ? 'none' : 'auto'
           }}
         >
-          <Suspense fallback={<LoadingFallback />}>
-            <Scene />
-          </Suspense>
-        </Canvas>
+          <Canvas
+            camera={{ position: [15, 5, 15], fov: 45 }}
+            shadows={false}
+            gl={{ 
+              antialias: true, 
+              alpha: true,
+              powerPreference: "high-performance"
+            }}
+            style={{ background: 'transparent' }}
+            onCreated={({ gl }) => {
+              gl.shadowMap.enabled = false;
+              gl.toneMapping = THREE.ACESFilmicToneMapping;
+              gl.toneMappingExposure = 1.2;
+            }}
+            // CRITICAL: Prevent canvas from interfering with touch scrolling
+            onPointerMissed={(e) => {
+              if (window.innerWidth < 768) {
+                e.stopPropagation();
+              }
+            }}
+          >
+            <Suspense fallback={<LoadingFallback />}>
+              <Scene particleTheme={particleTheme} />
+            </Suspense>
+          </Canvas>
+        </div>
       </div>
     </ErrorBoundary>
   );

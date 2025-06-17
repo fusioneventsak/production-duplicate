@@ -890,16 +890,16 @@ const SmartCameraControls: React.FC = () => {
     const currentTime = Date.now();
     const timeSinceInteraction = currentTime - lastInteractionTime.current;
     
-    // Always rotate, but pause during active interaction
+    // Always rotate, but pause during active interaction (desktop only)
     const shouldAutoRotate = !isUserInteracting.current || timeSinceInteraction > 1000;
     
     if (shouldAutoRotate || isMobile) {
       // Continuous rotation around the scene - slower speed
-      rotationAngle.current += 0.002; // Reduced from 0.005 for slower, more cinematic rotation
+      rotationAngle.current += 0.002;
       
-      // Calculate camera position in a circle around the scene
+      // Calculate camera position in a circle around the scene - lower height
       const radius = baseRadius.current;
-      const height = 5 + Math.sin(rotationAngle.current * 0.5) * 1; // Subtle height variation
+      const height = 3 + Math.sin(rotationAngle.current * 0.5) * 0.8; // Lower and less dramatic height variation
       
       camera.position.x = Math.cos(rotationAngle.current) * radius;
       camera.position.y = height;
@@ -909,7 +909,9 @@ const SmartCameraControls: React.FC = () => {
       camera.lookAt(0, 0, 0);
     }
     
-    controlsRef.current.update();
+    if (!isMobile) {
+      controlsRef.current.update();
+    }
   });
 
   React.useEffect(() => {
@@ -959,7 +961,7 @@ const SmartCameraControls: React.FC = () => {
     <OrbitControls
       ref={controlsRef}
       enablePan={false}
-      enableZoom={false} // Disable zoom to prevent page scroll issues
+      enableZoom={false}
       enableRotate={!isMobile}
       rotateSpeed={0.6}
       minDistance={8}
@@ -969,10 +971,7 @@ const SmartCameraControls: React.FC = () => {
       enableDamping={true}
       dampingFactor={0.1}
       autoRotate={false}
-      touches={{
-        ONE: isMobile ? THREE.TOUCH.NONE : THREE.TOUCH.ROTATE,
-        TWO: THREE.TOUCH.NONE
-      }}
+      enabled={!isMobile}
     />
   );
 };
@@ -1227,17 +1226,18 @@ const HeroScene: React.FC = () => {
         </div>
       </div>
 
-      {/* Fixed container with proper iOS handling */}
+      {/* iOS-optimized container - completely passive on mobile */}
       <div 
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full pointer-events-none"
         style={{ 
-          // Allow vertical scrolling but prevent horizontal scroll issues
-          touchAction: 'pan-y',
-          WebkitOverflowScrolling: 'touch'
+          touchAction: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none'
         }}
       >
         <Canvas
-          camera={{ position: [15, 5, 15], fov: 45 }}
+          camera={{ position: [15, 3, 15], fov: 45 }}
           shadows={false}
           gl={{ 
             antialias: true, 
@@ -1248,18 +1248,16 @@ const HeroScene: React.FC = () => {
           style={{ 
             background: 'transparent',
             width: '100%',
-            height: '100%'
+            height: '100%',
+            pointerEvents: 'none'
           }}
           onCreated={({ gl }) => {
             gl.shadowMap.enabled = false;
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = 1.2;
           }}
-          // Allow normal Three.js interactions but prevent page scroll conflicts
-          onPointerMissed={(e) => {
-            // Prevent bubbling to avoid scroll conflicts
-            e.stopPropagation();
-          }}
+          eventSource={undefined}
+          eventPrefix="client"
         >
           <Suspense fallback={<LoadingFallback />}>
             <Scene particleTheme={particleTheme} />

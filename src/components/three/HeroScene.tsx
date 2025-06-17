@@ -74,9 +74,9 @@ const DEMO_PHOTOS = [
   'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=400&h=600&fit=crop&crop=center', // group selfie
   'https://images.unsplash.com/photo-1592650450938-4d8b4b8c7c3b?w=400&h=600&fit=crop&crop=center', // celebration
   'https://images.unsplash.com/photo-1594736797933-d0401ba5f9e4?w=400&h=600&fit=crop&crop=center', // party fun
-  // Additional photos to reach 100 total
-  'https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=400&h=600&fit=crop&crop=center',
-  'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&h=600&fit=crop&crop=center'
+  // Additional 50 party photos to reach 100 total
+  'https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=400&h=600&fit=crop&crop=center', // group celebration
+  'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&h=600&fit=crop&crop=center', // party dancing
 ];
 
 // Fun comments that might appear on photos in a real collage
@@ -226,12 +226,13 @@ const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, ind
   );
 };
 
-interface EnhancedParticleSystemProps {
-  colorTheme?: typeof PARTICLE_THEMES[0];
+// Enhanced Particle System
+interface ParticleSystemProps {
+  colorTheme: typeof PARTICLE_THEMES[0];
   photoPositions: Array<{ position: [number, number, number] }>;
 }
 
-const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTheme = PARTICLE_THEMES[0], photoPositions }) => {
+const ParticleSystem: React.FC<ParticleSystemProps> = ({ colorTheme, photoPositions }) => {
   const pointsRef = useRef<THREE.Points>(null);
   const glowPointsRef = useRef<THREE.Points>(null);
   
@@ -243,7 +244,6 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
     const positions = new Float32Array(totalCount * 3);
     const velocities = new Float32Array(totalCount * 3);
     const sizes = new Float32Array(totalCount);
-    const opacities = new Float32Array(totalCount);
     
     let index = 0;
     
@@ -258,8 +258,6 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
       velocities[index * 3 + 2] = (Math.random() - 0.5) * 0.02;
       
       sizes[index] = Math.random() * 0.8 + 0.4;
-      opacities[index] = Math.random() * 0.6 + 0.2;
-      
       index++;
     }
     
@@ -279,8 +277,6 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
         velocities[index * 3 + 2] = (Math.random() - 0.5) * 0.01;
         
         sizes[index] = Math.random() * 1.2 + 0.6;
-        opacities[index] = Math.random() * 0.8 + 0.4;
-        
         index++;
       }
     });
@@ -289,7 +285,6 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
       positions,
       velocities,
       sizes,
-      opacities,
       count: totalCount
     };
   }, [photoPositions]);
@@ -320,7 +315,7 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
         positionArray[i3 + 2] = (Math.random() - 0.5) * 40;
       }
       
-      // Copy to glow particles with slight offset
+      // Copy to glow particles
       glowPositionArray[i3] = positionArray[i3];
       glowPositionArray[i3 + 1] = positionArray[i3 + 1];
       glowPositionArray[i3 + 2] = positionArray[i3 + 2];
@@ -353,7 +348,7 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
           />
         </bufferGeometry>
         <pointsMaterial
-          color={colorTheme?.primary || '#8b5cf6'}
+          color={colorTheme.primary}
           size={0.6}
           transparent
           opacity={0.7}
@@ -373,7 +368,7 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
           />
         </bufferGeometry>
         <pointsMaterial
-          color={colorTheme?.accent || '#c084fc'}
+          color={colorTheme.accent}
           size={1.2}
           transparent
           opacity={0.3}
@@ -382,69 +377,6 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
         />
       </points>
     </group>
-  );
-};
-
-// Particle Theme Selector Button
-interface ParticleControlsProps {
-  currentTheme?: typeof PARTICLE_THEMES[0];
-  onThemeChange: (theme: typeof PARTICLE_THEMES[0]) => void;
-}
-
-const ParticleControls: React.FC<ParticleControlsProps> = ({ currentTheme = PARTICLE_THEMES[0], onThemeChange }) => {
-  const [isOpen, setIsOpen] = React.useState(false);
-
-  return (
-    <div className="fixed top-4 right-4 z-50">
-      <div className="relative">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-4 py-2 bg-black/20 backdrop-blur-md border border-white/10 rounded-lg text-white hover:bg-black/30 transition-all duration-200 shadow-lg"
-          aria-label="Change particle colors"
-        >
-          <Palette size={20} />
-          <span className="hidden sm:inline">Particles</span>
-        </button>
-        
-        {isOpen && (
-          <div className="absolute top-full right-0 mt-2 bg-black/80 backdrop-blur-md border border-white/10 rounded-lg p-3 min-w-48 shadow-xl">
-            <h3 className="text-sm font-medium text-white/80 mb-2">Particle Theme</h3>
-            <div className="space-y-2">
-              {PARTICLE_THEMES.map((theme) => (
-                <button
-                  key={theme.name}
-                  onClick={() => {
-                    onThemeChange(theme);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 p-2 rounded-md transition-all duration-200 ${
-                    currentTheme?.name === theme.name 
-                      ? 'bg-white/20 border border-white/20' 
-                      : 'hover:bg-white/10'
-                  }`}
-                >
-                  <div className="flex gap-1">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.primary }}
-                    />
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.secondary }}
-                    />
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.accent }}
-                    />
-                  </div>
-                  <span className="text-sm text-white/90">{theme.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
   );
 };
 
@@ -623,7 +555,12 @@ const AutoRotatingCamera: React.FC = () => {
   );
 };
 
-const Scene: React.FC<{ particleTheme?: typeof PARTICLE_THEMES[0] }> = ({ particleTheme = PARTICLE_THEMES[0] }) => {
+// Scene component that brings everything together
+const Scene: React.FC = () => {
+  // State for particle theme
+  const [particleTheme, setParticleTheme] = React.useState(PARTICLE_THEMES[0]);
+
+  // Generate photo positions for 100 photos covering the entire floor plane
   const photoPositions = useMemo(() => {
     const positions: Array<{
       position: [number, number, number];
@@ -631,29 +568,36 @@ const Scene: React.FC<{ particleTheme?: typeof PARTICLE_THEMES[0] }> = ({ partic
       imageUrl: string;
     }> = [];
 
+    // Floor is 35x35 units, we want to cover it evenly
+    // Let's create a 10x10 grid to get exactly 100 photos
     const gridSize = 10;
-    const floorSize = 30;
-    const spacing = floorSize / (gridSize - 1);
+    const floorSize = 30; // Slightly smaller than floor to have margin
+    const spacing = floorSize / (gridSize - 1); // Even spacing
     
     let photoIndex = 0;
     
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
+        // Calculate position to center the grid on the floor
         const x = (col - (gridSize - 1) / 2) * spacing;
         const z = (row - (gridSize - 1) / 2) * spacing;
         
+        // Add small random offset for organic feel (but keep photos in their grid positions)
         const xOffset = (Math.random() - 0.5) * 0.5;
         const zOffset = (Math.random() - 0.5) * 0.5;
         
+        // Vary height in a wave pattern across the grid
         const baseHeight = 1.5;
         const waveHeight = Math.sin(row * 0.3) * Math.cos(col * 0.3) * 1.5;
         const randomHeight = Math.random() * 0.8;
         const y = baseHeight + waveHeight + randomHeight;
         
+        // Random rotations for natural look
         const rotationX = (Math.random() - 0.5) * 0.3;
         const rotationY = (Math.random() - 0.5) * 0.6;
         const rotationZ = (Math.random() - 0.5) * 0.2;
         
+        // Cycle through party photos
         const imageUrl = DEMO_PHOTOS[photoIndex % DEMO_PHOTOS.length];
         photoIndex++;
         
@@ -665,31 +609,124 @@ const Scene: React.FC<{ particleTheme?: typeof PARTICLE_THEMES[0] }> = ({ partic
       }
     }
     
+    console.log(`Generated ${positions.length} photo positions in ${gridSize}x${gridSize} grid`);
     return positions;
   }, []);
 
   return (
     <>
+      {/* Particle Theme Controls - positioned outside Canvas */}
+      <div className="fixed top-4 right-4 z-50">
+        <div className="relative">
+          <button
+            onClick={() => {
+              const currentIndex = PARTICLE_THEMES.findIndex(theme => theme.name === particleTheme.name);
+              const nextIndex = (currentIndex + 1) % PARTICLE_THEMES.length;
+              setParticleTheme(PARTICLE_THEMES[nextIndex]);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-black/20 backdrop-blur-md border border-white/10 rounded-lg text-white hover:bg-black/30 transition-all duration-200 shadow-lg"
+            aria-label="Change particle colors"
+          >
+            <Palette size={20} />
+            <span className="hidden sm:inline">{particleTheme.name}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Gradient Background Sphere */}
       <GradientBackground />
       
-      {/* Enhanced lighting setup */}
-      <ambientLight intensity={0.4} color="#ffffff" />
-      <directionalLight position={[5, 10, 5]} intensity={0.5} color="#ffffff" castShadow={false} />
-      <directionalLight position={[-5, 8, -5]} intensity={0.4} color="#ffffff" castShadow={false} />
-      <directionalLight position={[0, 12, -8]} intensity={0.3} color="#ffffff" castShadow={false} />
-      <directionalLight position={[5, 2, 5]} intensity={0.25} color="#ffffff" castShadow={false} />
-      <directionalLight position={[-5, 2, -5]} intensity={0.25} color="#ffffff" castShadow={false} />
-      <directionalLight position={[10, 5, 0]} intensity={0.2} color="#ffffff" castShadow={false} />
-      <directionalLight position={[-10, 5, 0]} intensity={0.2} color="#ffffff" castShadow={false} />
-      <directionalLight position={[0, 5, 10]} intensity={0.25} color="#ffffff" castShadow={false} />
+      {/* ENHANCED LIGHTING SETUP - Complete coverage with no dark spots */}
       
-      <pointLight position={[0, 6, 0]} intensity={0.3} color="#ffffff" distance={20} decay={2} />
-      <pointLight position={[0, 1, 6]} intensity={0.2} color="#ffffff" distance={15} decay={2} />
+      {/* Strong ambient light base - ensures minimum brightness everywhere */}
+      <ambientLight intensity={0.4} color="#ffffff" />
+      
+      {/* Key Light - Main directional light from above */}
+      <directionalLight
+        position={[5, 10, 5]}
+        intensity={0.5}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Fill Light - Opposite side to key light */}
+      <directionalLight
+        position={[-5, 8, -5]}
+        intensity={0.4}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Rim Light - Back lighting for depth */}
+      <directionalLight
+        position={[0, 12, -8]}
+        intensity={0.3}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Bottom Fill Lights - Eliminate shadows underneath */}
+      <directionalLight
+        position={[5, 2, 5]}
+        intensity={0.25}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      <directionalLight
+        position={[-5, 2, -5]}
+        intensity={0.25}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Side Lights - Ensure no dark sides */}
+      <directionalLight
+        position={[10, 5, 0]}
+        intensity={0.2}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      <directionalLight
+        position={[-10, 5, 0]}
+        intensity={0.2}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Front Lights - Illuminate photos facing camera */}
+      <directionalLight
+        position={[0, 5, 10]}
+        intensity={0.25}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Point Lights for localized brightness boost */}
+      <pointLight 
+        position={[0, 6, 0]} 
+        intensity={0.3} 
+        color="#ffffff" 
+        distance={20}
+        decay={2}
+      />
+      
+      <pointLight 
+        position={[0, 1, 6]} 
+        intensity={0.2} 
+        color="#ffffff" 
+        distance={15}
+        decay={2}
+      />
+      
+      {/* Additional ring of lights around the scene */}
       <pointLight position={[8, 4, 0]} intensity={0.2} color="#ffffff" distance={12} />
       <pointLight position={[-8, 4, 0]} intensity={0.2} color="#ffffff" distance={12} />
       <pointLight position={[0, 4, 8]} intensity={0.2} color="#ffffff" distance={12} />
       <pointLight position={[0, 4, -8]} intensity={0.2} color="#ffffff" distance={12} />
       
+      {/* Purple accent lights for atmosphere (reduced intensity) */}
       <spotLight
         position={[-8, 12, -8]}
         angle={Math.PI / 4}
@@ -708,14 +745,16 @@ const Scene: React.FC<{ particleTheme?: typeof PARTICLE_THEMES[0] }> = ({ partic
         castShadow={false}
       />
       
+      {/* Interactive Auto-Rotating Camera Controls */}
       <AutoRotatingCamera />
       
+      {/* Reflective Floor and Grid */}
       <ReflectiveFloor />
       <Floor />
       <Grid />
       
       {/* Enhanced Particle System */}
-      <EnhancedParticleSystem colorTheme={particleTheme} photoPositions={photoPositions} />
+      <ParticleSystem colorTheme={particleTheme} photoPositions={photoPositions} />
       
       {/* Floating Photos */}
       {photoPositions.map((photo, index) => (
@@ -728,6 +767,7 @@ const Scene: React.FC<{ particleTheme?: typeof PARTICLE_THEMES[0] }> = ({ partic
         />
       ))}
       
+      {/* Enhanced fog for more dramatic atmosphere */}
       <fog attach="fog" args={['#1a0a2e', 15, 35]} />
     </>
   );
@@ -764,54 +804,43 @@ const LoadingFallback: React.FC = () => (
 );
 
 const HeroScene: React.FC = () => {
-  const [particleTheme, setParticleTheme] = React.useState(PARTICLE_THEMES[0]);
-
   return (
     <ErrorBoundary>
-      {/* CRITICAL: Fixed mobile scrolling by ensuring pointer-events are properly controlled */}
-      <div className="absolute inset-0 w-full h-full">
-        {/* Interactive particle controls - always pointer-events-auto */}
-        <ParticleControls 
-          currentTheme={particleTheme} 
-          onThemeChange={setParticleTheme} 
-        />
-        
-        {/* Canvas with improved mobile handling */}
-        <div 
-          className="w-full h-full touch-pan-y" 
-          style={{ 
-            // CRITICAL: Allow mobile scrolling by preventing canvas from capturing touch events
-            touchAction: 'pan-y',
-            // On mobile, disable pointer events to allow scroll
-            pointerEvents: window.innerWidth < 768 ? 'none' : 'auto'
+      {/* CRITICAL: Fixed mobile scrolling by ensuring proper touch handling */}
+      <div 
+        className="absolute inset-0 w-full h-full"
+        style={{ 
+          // Allow mobile scrolling by preventing canvas from capturing touch events
+          touchAction: 'pan-y',
+          // Conditionally enable pointer events based on screen size
+          pointerEvents: typeof window !== 'undefined' && window.innerWidth < 768 ? 'none' : 'auto'
+        }}
+      >
+        <Canvas
+          camera={{ position: [15, 5, 15], fov: 45 }}
+          shadows={false}
+          gl={{ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: "high-performance"
+          }}
+          style={{ background: 'transparent' }}
+          onCreated={({ gl }) => {
+            gl.shadowMap.enabled = false;
+            gl.toneMapping = THREE.ACESFilmicToneMapping;
+            gl.toneMappingExposure = 1.2;
+          }}
+          // Prevent canvas from interfering with touch scrolling
+          onPointerMissed={(e) => {
+            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+              e.stopPropagation();
+            }
           }}
         >
-          <Canvas
-            camera={{ position: [15, 5, 15], fov: 45 }}
-            shadows={false}
-            gl={{ 
-              antialias: true, 
-              alpha: true,
-              powerPreference: "high-performance"
-            }}
-            style={{ background: 'transparent' }}
-            onCreated={({ gl }) => {
-              gl.shadowMap.enabled = false;
-              gl.toneMapping = THREE.ACESFilmicToneMapping;
-              gl.toneMappingExposure = 1.2;
-            }}
-            // CRITICAL: Prevent canvas from interfering with touch scrolling
-            onPointerMissed={(e) => {
-              if (window.innerWidth < 768) {
-                e.stopPropagation();
-              }
-            }}
-          >
-            <Suspense fallback={<LoadingFallback />}>
-              <Scene particleTheme={particleTheme} />
-            </Suspense>
-          </Canvas>
-        </div>
+          <Suspense fallback={<LoadingFallback />}>
+            <Scene />
+          </Suspense>
+        </Canvas>
       </div>
     </ErrorBoundary>
   );

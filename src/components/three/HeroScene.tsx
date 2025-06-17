@@ -802,20 +802,48 @@ const Floor: React.FC = () => {
   );
 };
 
-// Grid component - neon green, same size as floor
-const Grid: React.FC = () => {
+// Grid component - matches color theme for cohesive look
+const Grid: React.FC<{ colorTheme: typeof PARTICLE_THEMES[0] }> = ({ colorTheme }) => {
+  const gridRef = useRef<THREE.GridHelper>(null);
+  
   const gridHelper = useMemo(() => {
-    const helper = new THREE.GridHelper(35, 35, '#00ff41', '#00cc33');
+    const helper = new THREE.GridHelper(35, 35, colorTheme.primary, colorTheme.secondary);
     helper.position.y = -2.99;
     
     const material = helper.material as THREE.LineBasicMaterial;
     material.transparent = true;
-    material.opacity = 0.8;
+    material.opacity = 0.6; // Slightly more subtle
     
     return helper;
   }, []);
 
-  return <primitive object={gridHelper} />;
+  // Update grid colors when theme changes
+  React.useEffect(() => {
+    if (!gridRef.current) return;
+    
+    const material = gridRef.current.material as THREE.LineBasicMaterial;
+    // Create gradient effect using primary for main lines, secondary for subdivision lines
+    const primaryColor = new THREE.Color(colorTheme.primary);
+    const secondaryColor = new THREE.Color(colorTheme.secondary);
+    
+    // Update the grid colors
+    gridRef.current.dispose();
+    const newHelper = new THREE.GridHelper(35, 35, primaryColor.getHex(), secondaryColor.getHex());
+    newHelper.position.y = -2.99;
+    
+    const newMaterial = newHelper.material as THREE.LineBasicMaterial;
+    newMaterial.transparent = true;
+    newMaterial.opacity = 0.6;
+    
+    // Replace the current grid
+    if (gridRef.current.parent) {
+      gridRef.current.parent.remove(gridRef.current);
+      gridRef.current.parent.add(newHelper);
+    }
+    gridRef.current = newHelper;
+  }, [colorTheme]);
+
+  return <primitive ref={gridRef} object={gridHelper} />;
 };
 
 // Background gradient component - blacker top, royal purple
@@ -886,8 +914,8 @@ const SmartCameraControls: React.FC = () => {
     const shouldAutoRotate = !isUserInteracting.current || timeSinceInteraction > 1000;
     
     if (shouldAutoRotate || isMobile) {
-      // Continuous rotation around the scene
-      rotationAngle.current += 0.005; // Consistent rotation speed
+      // Continuous rotation around the scene - slower speed
+      rotationAngle.current += 0.002; // Reduced from 0.005 for slower, more cinematic rotation
       
       // Calculate camera position in a circle around the scene
       const radius = baseRadius.current;
@@ -1143,7 +1171,7 @@ const Scene: React.FC<{ particleTheme: typeof PARTICLE_THEMES[0] }> = ({ particl
       
       <ReflectiveFloor />
       <Floor />
-      <Grid />
+      <Grid colorTheme={particleTheme} />
       
       {/* Milky Way Particle System */}
       <MilkyWayParticleSystem colorTheme={particleTheme} photoPositions={photoPositions} />

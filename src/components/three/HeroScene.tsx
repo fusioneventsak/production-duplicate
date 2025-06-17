@@ -804,46 +804,28 @@ const Floor: React.FC = () => {
 
 // Grid component - matches color theme for cohesive look
 const Grid: React.FC<{ colorTheme: typeof PARTICLE_THEMES[0] }> = ({ colorTheme }) => {
-  const gridRef = useRef<THREE.GridHelper>(null);
+  const gridRef = useRef<THREE.Group>(null);
   
-  const gridHelper = useMemo(() => {
+  React.useEffect(() => {
+    if (!gridRef.current) return;
+    
+    // Clear existing grid
+    while (gridRef.current.children.length > 0) {
+      gridRef.current.remove(gridRef.current.children[0]);
+    }
+    
+    // Create new grid with theme colors
     const helper = new THREE.GridHelper(35, 35, colorTheme.primary, colorTheme.secondary);
     helper.position.y = -2.99;
     
     const material = helper.material as THREE.LineBasicMaterial;
     material.transparent = true;
-    material.opacity = 0.6; // Slightly more subtle
+    material.opacity = 0.6;
     
-    return helper;
-  }, []);
-
-  // Update grid colors when theme changes
-  React.useEffect(() => {
-    if (!gridRef.current) return;
-    
-    const material = gridRef.current.material as THREE.LineBasicMaterial;
-    // Create gradient effect using primary for main lines, secondary for subdivision lines
-    const primaryColor = new THREE.Color(colorTheme.primary);
-    const secondaryColor = new THREE.Color(colorTheme.secondary);
-    
-    // Update the grid colors
-    gridRef.current.dispose();
-    const newHelper = new THREE.GridHelper(35, 35, primaryColor.getHex(), secondaryColor.getHex());
-    newHelper.position.y = -2.99;
-    
-    const newMaterial = newHelper.material as THREE.LineBasicMaterial;
-    newMaterial.transparent = true;
-    newMaterial.opacity = 0.6;
-    
-    // Replace the current grid
-    if (gridRef.current.parent) {
-      gridRef.current.parent.remove(gridRef.current);
-      gridRef.current.parent.add(newHelper);
-    }
-    gridRef.current = newHelper;
+    gridRef.current.add(helper);
   }, [colorTheme]);
 
-  return <primitive ref={gridRef} object={gridHelper} />;
+  return <group ref={gridRef} />;
 };
 
 // Background gradient component - blacker top, royal purple

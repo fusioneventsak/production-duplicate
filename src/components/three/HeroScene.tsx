@@ -1212,9 +1212,17 @@ const LoadingFallback: React.FC = () => (
   </mesh>
 );
 
-const HeroScene: React.FC = () => {
+const HeroScene: React.FC<{ onThemeChange?: (theme: typeof PARTICLE_THEMES[0]) => void }> = ({ onThemeChange }) => {
   // State for particle theme - moved to main component
   const [particleTheme, setParticleTheme] = React.useState(PARTICLE_THEMES[0]);
+
+  // Notify parent when theme changes
+  const handleThemeChange = (newTheme: typeof PARTICLE_THEMES[0]) => {
+    setParticleTheme(newTheme);
+    if (onThemeChange) {
+      onThemeChange(newTheme);
+    }
+  };
 
   return (
     <ErrorBoundary>
@@ -1225,7 +1233,7 @@ const HeroScene: React.FC = () => {
             onClick={() => {
               const currentIndex = PARTICLE_THEMES.findIndex(theme => theme.name === particleTheme.name);
               const nextIndex = (currentIndex + 1) % PARTICLE_THEMES.length;
-              setParticleTheme(PARTICLE_THEMES[nextIndex]);
+              handleThemeChange(PARTICLE_THEMES[nextIndex]);
             }}
             className="flex items-center gap-2 px-3 py-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-lg text-white hover:bg-black/40 transition-all duration-200 shadow-lg text-sm"
             aria-label="Change particle colors"

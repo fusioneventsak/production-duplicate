@@ -227,11 +227,11 @@ const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, ind
 };
 
 interface EnhancedParticleSystemProps {
-  colorTheme: typeof PARTICLE_THEMES[0];
+  colorTheme?: typeof PARTICLE_THEMES[0];
   photoPositions: Array<{ position: [number, number, number] }>;
 }
 
-const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTheme, photoPositions }) => {
+const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTheme = PARTICLE_THEMES[0], photoPositions }) => {
   const pointsRef = useRef<THREE.Points>(null);
   const glowPointsRef = useRef<THREE.Points>(null);
   
@@ -353,7 +353,7 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
           />
         </bufferGeometry>
         <pointsMaterial
-          color={colorTheme.primary}
+          color={colorTheme?.primary || '#8b5cf6'}
           size={0.6}
           transparent
           opacity={0.7}
@@ -373,7 +373,7 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
           />
         </bufferGeometry>
         <pointsMaterial
-          color={colorTheme.accent}
+          color={colorTheme?.accent || '#c084fc'}
           size={1.2}
           transparent
           opacity={0.3}
@@ -387,11 +387,11 @@ const EnhancedParticleSystem: React.FC<EnhancedParticleSystemProps> = ({ colorTh
 
 // Particle Theme Selector Button
 interface ParticleControlsProps {
-  currentTheme: typeof PARTICLE_THEMES[0];
+  currentTheme?: typeof PARTICLE_THEMES[0];
   onThemeChange: (theme: typeof PARTICLE_THEMES[0]) => void;
 }
 
-const ParticleControls: React.FC<ParticleControlsProps> = ({ currentTheme, onThemeChange }) => {
+const ParticleControls: React.FC<ParticleControlsProps> = ({ currentTheme = PARTICLE_THEMES[0], onThemeChange }) => {
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
@@ -418,7 +418,7 @@ const ParticleControls: React.FC<ParticleControlsProps> = ({ currentTheme, onThe
                     setIsOpen(false);
                   }}
                   className={`w-full flex items-center gap-3 p-2 rounded-md transition-all duration-200 ${
-                    currentTheme.name === theme.name 
+                    currentTheme?.name === theme.name 
                       ? 'bg-white/20 border border-white/20' 
                       : 'hover:bg-white/10'
                   }`}
@@ -623,7 +623,7 @@ const AutoRotatingCamera: React.FC = () => {
   );
 };
 
-const Scene: React.FC<{ particleTheme: typeof PARTICLE_THEMES[0] }> = ({ particleTheme }) => {
+const Scene: React.FC<{ particleTheme?: typeof PARTICLE_THEMES[0] }> = ({ particleTheme = PARTICLE_THEMES[0] }) => {
   const photoPositions = useMemo(() => {
     const positions: Array<{
       position: [number, number, number];

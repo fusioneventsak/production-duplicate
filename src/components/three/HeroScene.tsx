@@ -1219,7 +1219,7 @@ const HeroScene: React.FC = () => {
   return (
     <ErrorBoundary>
       {/* Particle Theme Controls - positioned OUTSIDE Canvas at better location */}
-      <div className="fixed top-20 right-4 z-50">
+      <div className="absolute top-4 right-4 z-50">
         <div className="relative">
           <button
             onClick={() => {
@@ -1236,9 +1236,9 @@ const HeroScene: React.FC = () => {
         </div>
       </div>
 
-      {/* Canvas positioned absolutely behind content - iOS scroll optimized */}
+      {/* Canvas fills the hero section container */}
       <Canvas
-        className="fixed inset-0 -z-10"
+        className="absolute inset-0 w-full h-full"
         camera={{ position: [15, 3, 15], fov: 45 }}
         shadows={false}
         gl={{ 
@@ -1253,7 +1253,8 @@ const HeroScene: React.FC = () => {
           touchAction: 'none',
           WebkitTouchCallout: 'none',
           WebkitUserSelect: 'none',
-          userSelect: 'none'
+          userSelect: 'none',
+          zIndex: 1
         }}
         onCreated={({ gl }) => {
           gl.shadowMap.enabled = false;

@@ -348,7 +348,7 @@ export const LandingParticleBackground: React.FC<LandingParticleBackgroundProps>
     <div 
       className="fixed inset-0 w-full h-full"
       style={{ 
-        zIndex: -1, // Negative z-index to ensure it's behind everything
+        zIndex: 1, // Positive z-index but below content
         pointerEvents: 'none',
         touchAction: 'none',
         userSelect: 'none'
@@ -377,8 +377,6 @@ export const LandingParticleBackground: React.FC<LandingParticleBackgroundProps>
         }}
         frameloop="always"
         dpr={[1, 1.5]}
-        eventSource={undefined}
-        eventPrefix="client"
       >
         <Suspense fallback={null}>
           <SubtleParticleSystem colorTheme={particleTheme} />

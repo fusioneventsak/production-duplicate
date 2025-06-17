@@ -161,13 +161,8 @@ const DemoRequestModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
 const LandingPage: React.FC = () => {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   
-  // State for particle theme - shared between HeroScene and LandingParticleBackground
-  const [particleTheme, setParticleTheme] = useState(PARTICLE_THEMES[0]);
-
-  // Handle theme changes from HeroScene
-  const handleThemeChange = (newTheme: typeof PARTICLE_THEMES[0]) => {
-    setParticleTheme(newTheme);
-  };
+  // Use default particle theme
+  const particleTheme = PARTICLE_THEMES[0];
 
   return (
     <Layout>
@@ -178,9 +173,15 @@ const LandingPage: React.FC = () => {
       <div className="relative z-[5]">
         {/* Hero Section with WebGL Background ONLY */}
         <div className="relative overflow-hidden min-h-[100vh] flex items-center">
-          {/* WebGL Scene Background */}
-          <div className="absolute inset-0 w-full h-full z-[10]">
-            <HeroScene onThemeChange={handleThemeChange} />
+          {/* WebGL Scene Background - Make sure it's interactive */}
+          <div 
+            className="absolute inset-0 w-full h-full z-[10]" 
+            style={{ 
+              pointerEvents: 'auto',
+              touchAction: 'pan-x pan-y' // Allow scrolling but enable mouse interaction
+            }}
+          >
+            <HeroScene />
           </div>
           
           {/* Hero Content */}

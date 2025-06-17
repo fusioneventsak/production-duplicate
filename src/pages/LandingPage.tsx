@@ -177,14 +177,14 @@ const LandingPage: React.FC = () => {
       {/* All content sections with proper z-index (lower than header) */}
       <div className="relative z-[5]">
         {/* Hero Section with WebGL Background ONLY */}
-        <div className="relative overflow-hidden min-h-[100vh] flex items-center" style={{ pointerEvents: 'auto' }}>
+        <div className="relative overflow-hidden min-h-[100vh] flex items-center">
           {/* WebGL Scene Background */}
-          <div className="absolute inset-0 w-full h-full z-[6]" style={{ pointerEvents: 'auto' }}>
+          <div className="absolute inset-0 w-full h-full z-[10]">
             <HeroScene onThemeChange={handleThemeChange} />
           </div>
           
           {/* Hero Content */}
-          <div className="relative z-[7] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 lg:py-32 pointer-events-none">
+          <div className="relative z-[20] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 lg:py-32 pointer-events-none">
             <div className="text-center lg:text-left lg:w-1/2">
               {/* Abstract diffused gradient overlay behind text */}
               <div className="relative">
@@ -226,7 +226,7 @@ const LandingPage: React.FC = () => {
           </div>
           
           {/* Mobile Scroll Hint - Only show on mobile */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center z-[7] pointer-events-none md:hidden">
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center z-[20] pointer-events-none md:hidden">
             <div className="bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
               <div className="text-white/80 text-sm mb-2">Swipe up to explore features</div>
               <div className="animate-bounce flex justify-center">
@@ -238,7 +238,7 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Desktop Interaction Hint - Only show on desktop */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center z-[7] pointer-events-none hidden md:block">
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center z-[20] pointer-events-none hidden md:block">
             <div className="bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
               <div className="text-white/80 text-sm mb-2">Drag to explore • Auto-rotating showcase</div>
               <div className="animate-bounce flex justify-center">

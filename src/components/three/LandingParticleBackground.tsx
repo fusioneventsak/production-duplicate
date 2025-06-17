@@ -251,7 +251,7 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
               alpha = smoothstep(0.0, 1.0, alpha);
               
               // Increased opacity for better visibility
-              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.25);
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.4);
             }
           `}
         />
@@ -310,12 +310,18 @@ const SubtleParticleSystem: React.FC<SubtleParticleSystemProps> = ({ colorTheme 
               float alpha = 1.0 - (distanceToCenter * 2.0);
               alpha = smoothstep(0.0, 1.0, alpha);
               
-              // Moderate opacity for dust visibility
-              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.15);
+              // Increased opacity for dust visibility
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.25);
             }
           `}
         />
       </points>
+      
+      {/* DEBUG: Add a visible test particle to verify rendering */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.1, 8, 8]} />
+        <meshBasicMaterial color="#ff0000" transparent opacity={0.8} />
+      </mesh>
     </group>
   );
 };
@@ -344,11 +350,15 @@ export const LandingParticleBackground: React.FC<LandingParticleBackgroundProps>
         }}
         style={{ 
           background: 'transparent',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          width: '100%',
+          height: '100%'
         }}
-        onCreated={({ gl }) => {
+        onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.0;
+          // Debug: Log that canvas was created
+          console.log('🎨 LandingParticleBackground Canvas created');
         }}
         frameloop="always"
         dpr={[1, 1.5]}

@@ -161,8 +161,13 @@ const DemoRequestModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
 const LandingPage: React.FC = () => {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   
-  // Use default particle theme
-  const particleTheme = PARTICLE_THEMES[0];
+  // State for particle theme - shared between HeroScene and LandingParticleBackground
+  const [particleTheme, setParticleTheme] = useState(PARTICLE_THEMES[0]);
+
+  // Handle theme changes from HeroScene
+  const handleThemeChange = (newTheme: typeof PARTICLE_THEMES[0]) => {
+    setParticleTheme(newTheme);
+  };
 
   return (
     <Layout>
@@ -181,7 +186,7 @@ const LandingPage: React.FC = () => {
               touchAction: 'pan-x pan-y' // Allow scrolling but enable mouse interaction
             }}
           >
-            <HeroScene />
+            <HeroScene onThemeChange={handleThemeChange} />
           </div>
           
           {/* Hero Content */}

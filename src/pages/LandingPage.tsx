@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import HeroScene from '../components/three/HeroScene';
-import { LandingParticleBackground, PARTICLE_THEMES } from '../components/three/LandingParticleBackground.tsx';
+import { LandingParticleBackground, PARTICLE_THEMES } from '../components/three/LandingParticleBackground';
 import { ArrowRight, Camera, CloudCog, Share2, ShieldCheck, Mail, Phone } from 'lucide-react';
 
 // DemoRequestModal component
@@ -473,4 +473,272 @@ const LandingPage: React.FC = () => {
                       <div className="flex gap-2">
                         <div className="w-3 h-3 rounded-full bg-red-500"></div>
                         <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                        <div className="w-3 h-3 rounde
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      </div>
+                      <div className="ml-4 text-white text-sm font-semibold">3D Collage Editor</div>
+                      <div className="ml-auto flex gap-1">
+                        <div className="px-2 py-1 bg-white/10 rounded text-white text-xs">Scene</div>
+                        <div className="px-2 py-1 bg-purple-600/60 rounded text-white text-xs">Edit</div>
+                        <div className="px-2 py-1 bg-white/10 rounded text-white text-xs">Share</div>
+                      </div>
+                    </div>
+                    <div className="flex-1 flex">
+                      {/* Sidebar */}
+                      <div className="w-36 bg-black/30 border-r border-white/10 p-3">
+                        <div className="text-white text-xs font-semibold mb-3">Controls</div>
+                        <div className="space-y-2">
+                          <div className="text-white text-xs mb-1">Animation</div>
+                          <div className="w-full h-2 bg-white/20 rounded">
+                            <div className="w-3/4 h-full bg-purple-500 rounded"></div>
+                          </div>
+                          <div className="text-white text-xs mb-1">Camera Speed</div>
+                          <div className="w-full h-2 bg-white/20 rounded">
+                            <div className="w-1/2 h-full bg-blue-500 rounded"></div>
+                          </div>
+                          <div className="text-white text-xs mb-1">Lighting</div>
+                          <div className="w-full h-2 bg-white/20 rounded">
+                            <div className="w-5/6 h-full bg-yellow-500 rounded"></div>
+                          </div>
+                          <div className="text-white text-xs mb-1">Photo Size</div>
+                          <div className="w-full h-2 bg-white/20 rounded">
+                            <div className="w-2/3 h-full bg-green-500 rounded"></div>
+                          </div>
+                        </div>
+                        <div className="mt-3 text-xs text-white/60">Real-time controls</div>
+                      </div>
+                      
+                      {/* Main Canvas Area */}
+                      <div className="flex-1 bg-gradient-to-br from-slate-800 to-slate-700 relative overflow-hidden">
+                        {/* 3D Scene Preview */}
+                        <div className="absolute inset-3 bg-black/20 rounded border border-white/20 overflow-hidden">
+                          {/* Floating Photos in 3D Space */}
+                          <div className="relative w-full h-full">
+                            <div className="absolute top-6 left-6 w-12 h-9 rounded shadow-lg transform rotate-12 photo-float-1 overflow-hidden">
+                              <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" className="w-full h-full object-cover" alt="" />
+                            </div>
+                            <div className="absolute top-12 right-8 w-10 h-8 rounded shadow-lg transform -rotate-6 photo-float-2 overflow-hidden">
+                              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" className="w-full h-full object-cover" alt="" />
+                            </div>
+                            <div className="absolute bottom-8 left-12 w-14 h-10 rounded shadow-lg transform rotate-6 photo-float-3 overflow-hidden">
+                              <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" className="w-full h-full object-cover" alt="" />
+                            </div>
+                            <div className="absolute bottom-6 right-6 w-11 h-8 rounded shadow-lg transform -rotate-12 photo-float-4 overflow-hidden">
+                              <img src="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" className="w-full h-full object-cover" alt="" />
+                            </div>
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-12 rounded shadow-lg photo-float-5 overflow-hidden">
+                              <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" className="w-full h-full object-cover" alt="" />
+                            </div>
+                          </div>
+                          
+                          {/* Grid Lines */}
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="w-full h-full" style={{
+                              backgroundImage: `linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)`,
+                              backgroundSize: '15px 15px'
+                            }}></div>
+                          </div>
+                        </div>
+                        
+                        {/* Controls Overlay */}
+                        <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-sm rounded p-2 border border-white/20">
+                          <div className="flex justify-between items-center">
+                            <div className="flex gap-1">
+                              <button className="px-2 py-1 bg-purple-600/80 rounded text-white text-xs">Pattern A</button>
+                              <button className="px-2 py-1 bg-white/20 rounded text-white text-xs">Pattern B</button>
+                            </div>
+                            <div className="text-white text-xs">Moderation: ON</div>
+                            <div className="flex gap-1">
+                              <button className="px-2 py-1 bg-green-600/80 rounded text-white text-xs">Approve</button>
+                              <button className="px-2 py-1 bg-red-600/80 rounded text-white text-xs">Reject</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gradient-to-br from-gray-600 to-gray-800 rounded-b-2xl"></div>
+                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 w-48 h-4 bg-gradient-to-br from-gray-800 to-gray-600 rounded-full"></div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-3xl font-bold text-white mb-6">Professional Controls & Moderation</h3>
+              <p className="text-lg text-gray-300 mb-8">
+                Add your logo with transparency support. Full moderation controls - you decide what images are displayed. Add text to images. Coming soon: AI photo generation! Works with your existing AV equipment.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-center text-gray-300">
+                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-400 rounded-full flex items-center justify-center mr-4 text-white text-sm font-bold">✓</div>
+                  Full moderation controls over displayed content
+                </li>
+                <li className="flex items-center text-gray-300">
+                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-400 rounded-full flex items-center justify-center mr-4 text-white text-sm font-bold">✓</div>
+                  Add text to images and custom branding
+                </li>
+                <li className="flex items-center text-gray-300">
+                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-400 rounded-full flex items-center justify-center mr-4 text-white text-sm font-bold">✓</div>
+                  Floor/background color customization
+                </li>
+                <li className="flex items-center text-gray-300">
+                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-400 rounded-full flex items-center justify-center mr-4 text-white text-sm font-bold">✓</div>
+                  🚀 Coming Soon: AI photo generation
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact & CTA Section */}
+      <div className="py-16 bg-gradient-to-b from-black/40 to-black/20 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Contact Information */}
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-4">Ready to Transform Your Event?</h2>
+                <p className="text-xl text-gray-300 mb-6">
+                  Contact our team to learn how the 3D Selfie Holosphere can create unforgettable experiences at your next event.
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-500 rounded-lg flex items-center justify-center">
+                    <Mail className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">Email</p>
+                    <a href="mailto:info@fusion-events.ca" className="text-purple-400 hover:text-purple-300 transition-colors">
+                      info@fusion-events.ca
+                    </a>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-500 rounded-lg flex items-center justify-center">
+                    <Phone className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">Phone</p>
+                    <a href="tel:416-825-4938" className="text-purple-400 hover:text-purple-300 transition-colors">
+                      416-825-4938
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <p className="text-gray-400 text-sm">
+                  Professional event technology by Fusion Events. Available for corporate events, weddings, parties, and special occasions across the Greater Toronto Area.
+                </p>
+              </div>
+            </div>
+
+            {/* CTA Card */}
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 md:p-12 hover:bg-white/10 transition-all duration-300">
+              <div className="text-center space-y-6">
+                <h3 className="text-2xl md:text-3xl font-bold text-white">Ready to Get Started?</h3>
+                <p className="text-gray-300">
+                  See how PhotoSphere can transform your events and boost engagement. Request a personalized demo to see all features in action.
+                </p>
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setIsDemoModalOpen(true)}
+                    className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 transition-colors shadow-lg hover:shadow-purple-500/25"
+                  >
+                    Request Demo
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </button>
+                  <p className="text-sm text-gray-500">Free demo • No commitment required</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Trust Section */}
+      <div className="py-16 bg-black/20 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="bg-gradient-to-r from-purple-600 to-blue-500 rounded-full p-3 inline-block mb-4">
+            <ShieldCheck className="h-6 w-6 text-white" />
+          </div>
+          <h3 className="text-xl font-medium text-white mb-2">Your Photos Are Safe</h3>
+          <p className="text-gray-400 max-w-2xl mx-auto">
+            We use industry-standard encryption to protect your photos and personal information. Your memories are always safe with us.
+          </p>
+        </div>
+      </div>
+
+      {/* Demo Request Modal */}
+      <DemoRequestModal 
+        isOpen={isDemoModalOpen} 
+        onClose={() => setIsDemoModalOpen(false)} 
+      />
+
+      <style jsx>{`
+        .phone-float-animation {
+          animation: phoneFloat 8s ease-in-out infinite;
+        }
+        .computer-float-animation {
+          animation: computerFloat 8s ease-in-out infinite;
+        }
+        .photo-float-1 {
+          animation: photoFloat1 6s ease-in-out infinite;
+        }
+        .photo-float-2 {
+          animation: photoFloat2 6s ease-in-out infinite 1s;
+        }
+        .photo-float-3 {
+          animation: photoFloat3 6s ease-in-out infinite 2s;
+        }
+        .photo-float-4 {
+          animation: photoFloat4 6s ease-in-out infinite 3s;
+        }
+        .photo-float-5 {
+          animation: photoFloat5 6s ease-in-out infinite 4s;
+        }
+        
+        @keyframes phoneFloat {
+          0%, 100% { transform: translateY(0px) rotateY(15deg) rotateX(-5deg); }
+          50% { transform: translateY(-20px) rotateY(-15deg) rotateX(5deg); }
+        }
+        @keyframes computerFloat {
+          0%, 100% { transform: translateY(0px) rotateY(-10deg) rotateX(5deg); }
+          50% { transform: translateY(-25px) rotateY(10deg) rotateX(-5deg); }
+        }
+        @keyframes photoFloat1 {
+          0%, 100% { transform: translateY(0px) translateX(0px) rotate(12deg); }
+          33% { transform: translateY(-8px) translateX(4px) rotate(15deg); }
+          66% { transform: translateY(4px) translateX(-2px) rotate(10deg); }
+        }
+        @keyframes photoFloat2 {
+          0%, 100% { transform: translateY(0px) translateX(0px) rotate(-6deg); }
+          33% { transform: translateY(-6px) translateX(-3px) rotate(-3deg); }
+          66% { transform: translateY(3px) translateX(2px) rotate(-9deg); }
+        }
+        @keyframes photoFloat3 {
+          0%, 100% { transform: translateY(0px) translateX(0px) rotate(6deg); }
+          33% { transform: translateY(-5px) translateX(3px) rotate(9deg); }
+          66% { transform: translateY(2px) translateX(-4px) rotate(3deg); }
+        }
+        @keyframes photoFloat4 {
+          0%, 100% { transform: translateY(0px) translateX(0px) rotate(-12deg); }
+          33% { transform: translateY(-7px) translateX(-2px) rotate(-9deg); }
+          66% { transform: translateY(5px) translateX(3px) rotate(-15deg); }
+        }
+        @keyframes photoFloat5 {
+          0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+          33% { transform: translateY(-4px) translateX(2px) rotate(3deg); }
+          66% { transform: translateY(6px) translateX(-1px) rotate(-3deg); }
+        }
+      `}</style>
+    </Layout>
+  );
+};
+
+export default LandingPage;
+
+export default LandingPage

@@ -348,7 +348,7 @@ export const LandingParticleBackground: React.FC<LandingParticleBackgroundProps>
     <div 
       className="fixed inset-0 w-full h-full pointer-events-none"
       style={{ 
-        zIndex: 2, // Changed to ensure it's above background but below content
+        zIndex: 1, // Lower z-index - behind hero scene
         pointerEvents: 'none',
         touchAction: 'none'
       }}

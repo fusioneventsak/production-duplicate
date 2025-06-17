@@ -234,23 +234,22 @@ interface MilkyWayParticleSystemProps {
 
 const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTheme, photoPositions }) => {
   const mainCloudRef = useRef<THREE.Points>(null);
-  const glowCloudRef = useRef<THREE.Points>(null);
   const dustCloudRef = useRef<THREE.Points>(null);
   const clustersRef = useRef<THREE.Group>(null);
   
   // Fixed particle counts to prevent buffer size mismatches
-  const MAIN_COUNT = 3500;
-  const DUST_COUNT = 2000;
-  const CLUSTER_COUNT = 12;
-  const PARTICLES_PER_CLUSTER = 200;
+  const MAIN_COUNT = 4000;
+  const DUST_COUNT = 2500;
+  const CLUSTER_COUNT = 8;
+  const PARTICLES_PER_CLUSTER = 300;
   
-  // Create realistic particle distribution with clusters
+  // Create realistic particle distribution with varying colors and sizes
   const particleData = useMemo(() => {
     // Main cloud particles (distributed in a galaxy-like spiral)
     const mainPositions = new Float32Array(MAIN_COUNT * 3);
-    const mainVelocities = new Float32Array(MAIN_COUNT * 3);
+    const mainColors = new Float32Array(MAIN_COUNT * 3);
     const mainSizes = new Float32Array(MAIN_COUNT);
-    const mainBrightness = new Float32Array(MAIN_COUNT);
+    const mainVelocities = new Float32Array(MAIN_COUNT * 3);
     
     for (let i = 0; i < MAIN_COUNT; i++) {
       // Create multiple spiral arms like the Milky Way
@@ -277,24 +276,42 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       const sizeRandom = Math.random();
       if (sizeRandom < 0.7) {
         // 70% tiny particles
-        mainSizes[i] = 0.1 + Math.random() * 0.3;
+        mainSizes[i] = 0.5 + Math.random() * 1.5;
       } else if (sizeRandom < 0.9) {
         // 20% small particles
-        mainSizes[i] = 0.4 + Math.random() * 0.4;
+        mainSizes[i] = 2 + Math.random() * 2;
       } else {
         // 10% larger particles (star clusters)
-        mainSizes[i] = 0.8 + Math.random() * 0.6;
+        mainSizes[i] = 4 + Math.random() * 3;
       }
       
-      // Brightness varies with size and distance
-      const distanceFactor = Math.max(0.1, 1 - (distanceFromCenter * 0.008));
-      mainBrightness[i] = distanceFactor * (0.3 + mainSizes[i] * 0.7);
+      // Color variation within theme - create realistic star colors
+      const baseColor = new THREE.Color(colorTheme.primary);
+      const hsl = { h: 0, s: 0, l: 0 };
+      baseColor.getHSL(hsl);
+      
+      // Vary hue slightly within the theme
+      const hueVariation = (Math.random() - 0.5) * 0.1; // ±10% hue variation
+      const saturationVariation = 0.8 + Math.random() * 0.4; // 80-120% saturation
+      const lightnessVariation = 0.3 + Math.random() * 0.7; // 30-100% lightness
+      
+      const particleColor = new THREE.Color();
+      particleColor.setHSL(
+        (hsl.h + hueVariation + 1) % 1, // Ensure hue stays in 0-1 range
+        Math.min(1, hsl.s * saturationVariation),
+        Math.min(1, hsl.l * lightnessVariation)
+      );
+      
+      mainColors[i * 3] = particleColor.r;
+      mainColors[i * 3 + 1] = particleColor.g;
+      mainColors[i * 3 + 2] = particleColor.b;
     }
     
     // Dust cloud particles (very fine, close to photos)
     const dustPositions = new Float32Array(DUST_COUNT * 3);
-    const dustVelocities = new Float32Array(DUST_COUNT * 3);
+    const dustColors = new Float32Array(DUST_COUNT * 3);
     const dustSizes = new Float32Array(DUST_COUNT);
+    const dustVelocities = new Float32Array(DUST_COUNT * 3);
     
     for (let i = 0; i < DUST_COUNT; i++) {
       // Concentrate around photo area with exponential falloff
@@ -311,7 +328,23 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.003;
       
       // Very fine dust particles
-      dustSizes[i] = 0.05 + Math.random() * 0.15;
+      dustSizes[i] = 0.3 + Math.random() * 1.2;
+      
+      // Dust color variation - use secondary color with variation
+      const baseColor = new THREE.Color(colorTheme.secondary);
+      const hsl = { h: 0, s: 0, l: 0 };
+      baseColor.getHSL(hsl);
+      
+      const particleColor = new THREE.Color();
+      particleColor.setHSL(
+        (hsl.h + (Math.random() - 0.5) * 0.15 + 1) % 1,
+        Math.min(1, hsl.s * (0.5 + Math.random() * 0.5)),
+        Math.min(1, hsl.l * (0.4 + Math.random() * 0.6))
+      );
+      
+      dustColors[i * 3] = particleColor.r;
+      dustColors[i * 3 + 1] = particleColor.g;
+      dustColors[i * 3 + 2] = particleColor.b;
     }
     
     // Create dense star clusters at various distances
@@ -328,8 +361,12 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       };
       
       const clusterPositions = new Float32Array(PARTICLES_PER_CLUSTER * 3);
-      const clusterVelocities = new Float32Array(PARTICLES_PER_CLUSTER * 3);
+      const clusterColors = new Float32Array(PARTICLES_PER_CLUSTER * 3);
       const clusterSizes = new Float32Array(PARTICLES_PER_CLUSTER);
+      const clusterVelocities = new Float32Array(PARTICLES_PER_CLUSTER * 3);
+      
+      // Choose cluster color theme (primary, secondary, or accent)
+      const clusterColorBase = [colorTheme.primary, colorTheme.secondary, colorTheme.accent][c % 3];
       
       for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
         // Dense spherical distribution
@@ -350,13 +387,30 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         clusterVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.001;
         
         // Varied sizes within cluster
-        clusterSizes[i] = 0.2 + Math.random() * 0.5;
+        clusterSizes[i] = 0.8 + Math.random() * 2.5;
+        
+        // Cluster color variation
+        const baseColor = new THREE.Color(clusterColorBase);
+        const hsl = { h: 0, s: 0, l: 0 };
+        baseColor.getHSL(hsl);
+        
+        const particleColor = new THREE.Color();
+        particleColor.setHSL(
+          (hsl.h + (Math.random() - 0.5) * 0.08 + 1) % 1,
+          Math.min(1, hsl.s * (0.7 + Math.random() * 0.6)),
+          Math.min(1, hsl.l * (0.5 + Math.random() * 0.5))
+        );
+        
+        clusterColors[i * 3] = particleColor.r;
+        clusterColors[i * 3 + 1] = particleColor.g;
+        clusterColors[i * 3 + 2] = particleColor.b;
       }
       
       clusterData.push({
         positions: clusterPositions,
-        velocities: clusterVelocities,
+        colors: clusterColors,
         sizes: clusterSizes,
+        velocities: clusterVelocities,
         center: clusterCenter
       });
     }
@@ -364,29 +418,29 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
     return {
       main: {
         positions: mainPositions,
-        velocities: mainVelocities,
+        colors: mainColors,
         sizes: mainSizes,
-        brightness: mainBrightness,
+        velocities: mainVelocities,
         count: MAIN_COUNT
       },
       dust: {
         positions: dustPositions,
-        velocities: dustVelocities,
+        colors: dustColors,
         sizes: dustSizes,
+        velocities: dustVelocities,
         count: DUST_COUNT
       },
       clusters: clusterData
     };
-  }, []); // Remove photoPositions dependency to prevent recreation
+  }, []); // Remove dependencies to prevent recreation
 
   // Advanced animation system with realistic stellar motion
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     
     // Animate main cloud with galactic rotation
-    if (mainCloudRef.current && glowCloudRef.current) {
+    if (mainCloudRef.current) {
       const mainPositions = mainCloudRef.current.geometry.attributes.position.array as Float32Array;
-      const glowPositions = glowCloudRef.current.geometry.attributes.position.array as Float32Array;
       
       for (let i = 0; i < particleData.main.count; i++) {
         const i3 = i * 3;
@@ -415,19 +469,12 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         mainPositions[i3] += Math.sin(parallaxFreq) * 0.001;
         mainPositions[i3 + 1] += Math.cos(parallaxFreq * 0.7) * 0.0005;
         mainPositions[i3 + 2] += Math.sin(parallaxFreq * 1.3) * 0.001;
-        
-        // Copy to glow layer
-        glowPositions[i3] = mainPositions[i3];
-        glowPositions[i3 + 1] = mainPositions[i3 + 1];
-        glowPositions[i3 + 2] = mainPositions[i3 + 2];
       }
       
       mainCloudRef.current.geometry.attributes.position.needsUpdate = true;
-      glowCloudRef.current.geometry.attributes.position.needsUpdate = true;
       
       // Galactic rotation - very slow
       mainCloudRef.current.rotation.y = time * 0.003;
-      glowCloudRef.current.rotation.y = time * 0.003;
     }
     
     // Animate dust cloud with atmospheric turbulence

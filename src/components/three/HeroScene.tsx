@@ -567,12 +567,18 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
 
   return (
     <group>
-      {/* Main Milky Way Cloud */}
+      {/* Main Milky Way Cloud - Core stellar population with varying colors */}
       <points ref={mainCloudRef}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
             array={particleData.main.positions}
+            count={particleData.main.count}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            array={particleData.main.colors}
             count={particleData.main.count}
             itemSize={3}
           />
@@ -583,42 +589,55 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
             itemSize={1}
           />
         </bufferGeometry>
-        <pointsMaterial
-          color={colorTheme.primary}
-          size={0.15}
+        <shaderMaterial
           transparent
-          opacity={0.8}
-          sizeAttenuation
+          vertexColors
           blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          vertexShader={`
+            attribute float size;
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+              vColor = color;
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              gl_PointSize = size * (300.0 / -mvPosition.z);
+              gl_Position = projectionMatrix * mvPosition;
+              
+              // Distance-based opacity
+              float distance = length(mvPosition.xyz);
+              vOpacity = 1.0 - smoothstep(50.0, 200.0, distance);
+            }
+          `}
+          fragmentShader={`
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+              float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+              if (distanceToCenter > 0.5) discard;
+              
+              // Smooth circular falloff
+              float alpha = 1.0 - (distanceToCenter * 2.0);
+              alpha = smoothstep(0.0, 1.0, alpha);
+              
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.8);
+            }
+          `}
         />
       </points>
       
-      {/* Glow layer for main cloud */}
-      <points ref={glowCloudRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            array={particleData.main.positions}
-            count={particleData.main.count}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          color={colorTheme.accent}
-          size={0.3}
-          transparent
-          opacity={0.3}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-        />
-      </points>
-      
-      {/* Dust Cloud */}
+      {/* Cosmic dust and gas clouds with color variation */}
       <points ref={dustCloudRef}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
             array={particleData.dust.positions}
+            count={particleData.dust.count}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            array={particleData.dust.colors}
             count={particleData.dust.count}
             itemSize={3}
           />
@@ -629,17 +648,44 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
             itemSize={1}
           />
         </bufferGeometry>
-        <pointsMaterial
-          color={colorTheme.secondary}
-          size={0.08}
+        <shaderMaterial
           transparent
-          opacity={0.6}
-          sizeAttenuation
+          vertexColors
           blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          vertexShader={`
+            attribute float size;
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+              vColor = color;
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              gl_PointSize = size * (200.0 / -mvPosition.z);
+              gl_Position = projectionMatrix * mvPosition;
+              
+              // Distance-based opacity for dust
+              float distance = length(mvPosition.xyz);
+              vOpacity = 1.0 - smoothstep(30.0, 100.0, distance);
+            }
+          `}
+          fragmentShader={`
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+              float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+              if (distanceToCenter > 0.5) discard;
+              
+              // Softer falloff for dust
+              float alpha = 1.0 - (distanceToCenter * 2.0);
+              alpha = smoothstep(0.0, 1.0, alpha);
+              
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.6);
+            }
+          `}
         />
       </points>
       
-      {/* Asymmetric Clusters */}
+      {/* Star clusters and satellite galaxies with themed colors */}
       <group ref={clustersRef}>
         {particleData.clusters.map((cluster, index) => (
           <points key={index}>
@@ -647,23 +693,56 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
               <bufferAttribute
                 attach="attributes-position"
                 array={cluster.positions}
-                count={cluster.positions.length / 3}
+                count={PARTICLES_PER_CLUSTER}
+                itemSize={3}
+              />
+              <bufferAttribute
+                attach="attributes-color"
+                array={cluster.colors}
+                count={PARTICLES_PER_CLUSTER}
                 itemSize={3}
               />
               <bufferAttribute
                 attach="attributes-size"
                 array={cluster.sizes}
-                count={cluster.sizes.length}
+                count={PARTICLES_PER_CLUSTER}
                 itemSize={1}
               />
             </bufferGeometry>
-            <pointsMaterial
-              color={index % 2 === 0 ? colorTheme.primary : colorTheme.accent}
-              size={0.12}
+            <shaderMaterial
               transparent
-              opacity={0.9}
-              sizeAttenuation
+              vertexColors
               blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              vertexShader={`
+                attribute float size;
+                varying vec3 vColor;
+                varying float vOpacity;
+                void main() {
+                  vColor = color;
+                  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                  gl_PointSize = size * (250.0 / -mvPosition.z);
+                  gl_Position = projectionMatrix * mvPosition;
+                  
+                  // Cluster opacity based on distance
+                  float distance = length(mvPosition.xyz);
+                  vOpacity = 1.0 - smoothstep(80.0, 300.0, distance);
+                }
+              `}
+              fragmentShader={`
+                varying vec3 vColor;
+                varying float vOpacity;
+                void main() {
+                  float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+                  if (distanceToCenter > 0.5) discard;
+                  
+                  // Bright core for cluster particles
+                  float alpha = 1.0 - (distanceToCenter * 2.0);
+                  alpha = smoothstep(0.0, 1.0, alpha);
+                  
+                  gl_FragColor = vec4(vColor, alpha * vOpacity * 0.9);
+                }
+              `}
             />
           </points>
         ))}

@@ -645,7 +645,7 @@ const GradientBackground: React.FC = () => {
 };
 
 // Smart auto-rotating camera with user interaction memory
-const SmartAutoRotatingCamera: React.FC = () => {
+const SmartCameraControls: React.FC = () => {
   const controlsRef = useRef<any>();
   const { camera } = useThree();
   const isUserInteracting = useRef(false);
@@ -817,7 +817,6 @@ const Scene: React.FC<{ particleTheme: typeof PARTICLE_THEMES[0] }> = ({ particl
 
   return (
     <>
-
       {/* Gradient Background Sphere */}
       <GradientBackground />
       
@@ -930,16 +929,15 @@ const Scene: React.FC<{ particleTheme: typeof PARTICLE_THEMES[0] }> = ({ particl
         castShadow={false}
       />
       
-      {/* Interactive Auto-Rotating Camera Controls */}
-      <AutoRotatingCamera />
+      {/* Smart Camera Controls */}
+      <SmartCameraControls />
       
-      {/* Reflective Floor and Grid */}
       <ReflectiveFloor />
       <Floor />
       <Grid />
       
-      {/* Enhanced Particle System */}
-      <ParticleSystem colorTheme={particleTheme} photoPositions={photoPositions} />
+      {/* Milky Way Particle System */}
+      <MilkyWayParticleSystem colorTheme={particleTheme} photoPositions={photoPositions} />
       
       {/* Floating Photos */}
       {photoPositions.map((photo, index) => (

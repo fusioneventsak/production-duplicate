@@ -74,9 +74,7 @@ const DEMO_PHOTOS = [
   'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=400&h=600&fit=crop&crop=center', // group selfie
   'https://images.unsplash.com/photo-1592650450938-4d8b4b8c7c3b?w=400&h=600&fit=crop&crop=center', // celebration
   'https://images.unsplash.com/photo-1594736797933-d0401ba5f9e4?w=400&h=600&fit=crop&crop=center', // party fun
-  // Additional 50 party photos to reach 100 total
   'https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=400&h=600&fit=crop&crop=center', // group celebration
-  'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&h=600&fit=crop&crop=center', // party dancing
 ];
 
 // Fun comments that might appear on photos in a real collage
@@ -1229,17 +1227,13 @@ const HeroScene: React.FC = () => {
         </div>
       </div>
 
-      {/* CRITICAL: Enhanced mobile scrolling fix for iOS */}
+      {/* Fixed container with proper iOS handling */}
       <div 
         className="absolute inset-0 w-full h-full"
         style={{ 
-          // iOS-specific touch handling
-          touchAction: 'pan-y manipulation',
-          WebkitTouchCallout: 'none',
-          WebkitUserSelect: 'none',
-          // Disable pointer events on mobile/touch devices completely
-          pointerEvents: typeof window !== 'undefined' && 
-            (window.innerWidth < 768 || 'ontouchstart' in window) ? 'none' : 'auto'
+          // Allow vertical scrolling but prevent horizontal scroll issues
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch'
         }}
       >
         <Canvas
@@ -1249,35 +1243,23 @@ const HeroScene: React.FC = () => {
             antialias: true, 
             alpha: true,
             powerPreference: "high-performance",
-            preserveDrawingBuffer: false, // Better for mobile performance
+            preserveDrawingBuffer: false,
           }}
           style={{ 
             background: 'transparent',
-            // Additional iOS fixes
-            touchAction: 'none',
-            WebkitTouchCallout: 'none',
-            WebkitUserSelect: 'none',
-            userSelect: 'none'
+            width: '100%',
+            height: '100%'
           }}
           onCreated={({ gl }) => {
             gl.shadowMap.enabled = false;
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = 1.2;
-            
-            // iOS-specific canvas fixes
-            const canvas = gl.domElement;
-            canvas.style.touchAction = 'none';
-            canvas.style.userSelect = 'none';
-            canvas.style.webkitUserSelect = 'none';
           }}
-          // Prevent all canvas touch interactions on mobile
+          // Allow normal Three.js interactions but prevent page scroll conflicts
           onPointerMissed={(e) => {
+            // Prevent bubbling to avoid scroll conflicts
             e.stopPropagation();
           }}
-          // Disable all events on touch devices
-          events={typeof window !== 'undefined' && 'ontouchstart' in window ? 
-            { enabled: false } : undefined
-          }
         >
           <Suspense fallback={<LoadingFallback />}>
             <Scene particleTheme={particleTheme} />

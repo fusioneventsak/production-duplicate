@@ -874,7 +874,7 @@ const GradientBackground: React.FC = () => {
   );
 };
 
-// Smart auto-rotating camera with continuous smooth rotation
+// FIXED: Smart camera controls - ALWAYS INTERACTIVE on all devices
 const SmartCameraControls: React.FC = () => {
   const controlsRef = useRef<any>();
   const { camera } = useThree();
@@ -898,10 +898,11 @@ const SmartCameraControls: React.FC = () => {
     const currentTime = Date.now();
     const timeSinceInteraction = currentTime - lastInteractionTime.current;
     
-    // Always rotate, but pause during active interaction (desktop only)
+    // Always rotate, but pause during active interaction
     const shouldAutoRotate = !isUserInteracting.current || timeSinceInteraction > 1000;
     
-    if (shouldAutoRotate || isMobile) {
+    // FIXED: Remove mobile special case - same logic for all devices
+    if (shouldAutoRotate) {
       // Continuous rotation around the scene - slower speed
       rotationAngle.current += 0.002;
       
@@ -917,13 +918,15 @@ const SmartCameraControls: React.FC = () => {
       camera.lookAt(0, 0, 0);
     }
     
-    if (!isMobile && controlsRef.current) {
+    // FIXED: Update controls for all devices
+    if (controlsRef.current) {
       controlsRef.current.update();
     }
   });
 
   React.useEffect(() => {
-    if (!controlsRef.current || isMobile) return;
+    // FIXED: Remove mobile restriction - allow controls on all devices
+    if (!controlsRef.current) return;
 
     const controls = controlsRef.current;
     
@@ -961,19 +964,20 @@ const SmartCameraControls: React.FC = () => {
       controls.removeEventListener('end', handleEnd);
       controls.removeEventListener('change', handleChange);
     };
-  }, [isMobile, camera, isReady]);
+  }, [camera, isReady]); // FIXED: Remove isMobile dependency
 
-  // Don't render OrbitControls on mobile or before camera is ready
-  if (isMobile || !isReady) {
+  // FIXED: Only prevent rendering if camera isn't ready, allow mobile
+  if (!isReady) {
     return null;
   }
 
+  // FIXED: Always render OrbitControls - no mobile restriction
   return (
     <OrbitControls
       ref={controlsRef}
       enablePan={false}
       enableZoom={false}
-      enableRotate={true}
+      enableRotate={true}        // FIXED: Always true, no mobile restriction
       rotateSpeed={0.6}
       minDistance={8}
       maxDistance={25}
@@ -1155,7 +1159,7 @@ const Scene: React.FC<{ particleTheme: typeof PARTICLE_THEMES[0] }> = ({ particl
         castShadow={false}
       />
       
-      {/* Smart Camera Controls */}
+      {/* FIXED: Smart Camera Controls - Always Interactive */}
       <SmartCameraControls />
       
       <ReflectiveFloor />
@@ -1244,7 +1248,7 @@ const HeroScene: React.FC<{ onThemeChange?: (theme: typeof PARTICLE_THEMES[0]) =
         </div>
       </div>
 
-      {/* Canvas fills the hero section container */}
+      {/* FIXED: Canvas - Now fully interactive */}
       <Canvas
         className="absolute inset-0 w-full h-full"
         camera={{ position: [15, 3, 15], fov: 45 }}
@@ -1257,8 +1261,8 @@ const HeroScene: React.FC<{ onThemeChange?: (theme: typeof PARTICLE_THEMES[0]) =
         }}
         style={{ 
           background: 'transparent',
-          pointerEvents: 'none',
-          touchAction: 'none',
+          pointerEvents: 'auto',          // FIXED: Changed from 'none' to 'auto'
+          touchAction: 'manipulation',    // FIXED: Changed from 'none' to 'manipulation'
           WebkitTouchCallout: 'none',
           WebkitUserSelect: 'none',
           userSelect: 'none',

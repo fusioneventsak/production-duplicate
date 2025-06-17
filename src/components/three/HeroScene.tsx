@@ -1236,46 +1236,37 @@ const HeroScene: React.FC = () => {
         </div>
       </div>
 
-      {/* iOS-optimized container - completely passive for smooth scrolling */}
-      <div 
-        className="absolute inset-0 w-full h-full"
-        style={{ 
-          pointerEvents: 'none',
-          WebkitOverflowScrolling: 'touch',
-          transform: 'translateZ(0)', // Hardware acceleration
-          willChange: 'transform'
+      {/* Canvas positioned absolutely behind content - iOS scroll optimized */}
+      <Canvas
+        className="fixed inset-0 -z-10"
+        camera={{ position: [15, 3, 15], fov: 45 }}
+        shadows={false}
+        gl={{ 
+          antialias: true, 
+          alpha: true,
+          powerPreference: "high-performance",
+          preserveDrawingBuffer: false,
         }}
+        style={{ 
+          background: 'transparent',
+          pointerEvents: 'none',
+          touchAction: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none'
+        }}
+        onCreated={({ gl }) => {
+          gl.shadowMap.enabled = false;
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.2;
+        }}
+        frameloop="always"
+        dpr={[1, 2]}
       >
-        <Canvas
-          camera={{ position: [15, 3, 15], fov: 45 }}
-          shadows={false}
-          gl={{ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: "high-performance",
-            preserveDrawingBuffer: false,
-          }}
-          style={{ 
-            background: 'transparent',
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-            transform: 'translateZ(0)', // Hardware acceleration
-            backfaceVisibility: 'hidden'
-          }}
-          onCreated={({ gl }) => {
-            gl.shadowMap.enabled = false;
-            gl.toneMapping = THREE.ACESFilmicToneMapping;
-            gl.toneMappingExposure = 1.2;
-          }}
-          frameloop="always"
-          dpr={[1, 2]}
-        >
-          <Suspense fallback={<LoadingFallback />}>
-            <Scene particleTheme={particleTheme} />
-          </Suspense>
-        </Canvas>
-      </div>
+        <Suspense fallback={<LoadingFallback />}>
+          <Scene particleTheme={particleTheme} />
+        </Suspense>
+      </Canvas>
     </ErrorBoundary>
   );
 };

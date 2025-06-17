@@ -240,72 +240,90 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
   
   // Create realistic particle distribution with clusters
   const particleData = useMemo(() => {
-    const mainCount = 2000; // Main particle cloud
-    const dustCount = 1500; // Dust particles
-    const clusterCount = 8; // Number of asymmetric clusters
-    const particlesPerCluster = 300;
+    const mainCount = 3500; // Increased for denser, more realistic look
+    const dustCount = 2000; // More dust particles
+    const clusterCount = 12; // More clusters
+    const particlesPerCluster = 200;
     
     // Main cloud particles (distributed in a galaxy-like spiral)
     const mainPositions = new Float32Array(mainCount * 3);
     const mainVelocities = new Float32Array(mainCount * 3);
     const mainSizes = new Float32Array(mainCount);
-    const mainOpacities = new Float32Array(mainCount);
+    const mainBrightness = new Float32Array(mainCount);
     
     for (let i = 0; i < mainCount; i++) {
-      // Create spiral galaxy distribution
-      const angle = (i / mainCount) * Math.PI * 8; // Multiple spiral arms
-      const radius = (Math.random() * 0.7 + 0.3) * 60; // Vary radius
-      const spiralOffset = Math.sin(angle * 0.5) * 10;
+      // Create multiple spiral arms like the Milky Way
+      const armIndex = Math.floor(Math.random() * 4); // 4 spiral arms
+      const armAngle = (armIndex * Math.PI / 2) + (Math.random() - 0.5) * 0.5;
+      const distanceFromCenter = Math.pow(Math.random(), 0.5) * 80; // Power distribution for realistic density
+      const spiralTightness = 0.2;
+      const angle = armAngle + (distanceFromCenter * spiralTightness);
       
-      // Add noise for organic feel
-      const noise = (Math.random() - 0.5) * 15;
+      // Add noise and scatter
+      const noise = (Math.random() - 0.5) * (8 + distanceFromCenter * 0.1);
+      const heightNoise = (Math.random() - 0.5) * (2 + distanceFromCenter * 0.05);
       
-      mainPositions[i * 3] = Math.cos(angle) * (radius + spiralOffset) + noise;
-      mainPositions[i * 3 + 1] = (Math.random() - 0.5) * 40 + Math.sin(angle * 0.3) * 8; // Vertical variation
-      mainPositions[i * 3 + 2] = Math.sin(angle) * (radius + spiralOffset) + noise;
+      mainPositions[i * 3] = Math.cos(angle) * distanceFromCenter + noise;
+      mainPositions[i * 3 + 1] = heightNoise + Math.sin(angle * 0.1) * (distanceFromCenter * 0.02);
+      mainPositions[i * 3 + 2] = Math.sin(angle) * distanceFromCenter + noise;
       
-      // Velocities for subtle movement
-      mainVelocities[i * 3] = (Math.random() - 0.5) * 0.005;
-      mainVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.003;
-      mainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.005;
+      // Very subtle movement for realism
+      mainVelocities[i * 3] = (Math.random() - 0.5) * 0.002;
+      mainVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.001;
+      mainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.002;
       
-      // Vary sizes based on distance from center
-      const distanceFromCenter = Math.sqrt(
-        mainPositions[i * 3] ** 2 + 
-        mainPositions[i * 3 + 2] ** 2
-      );
-      mainSizes[i] = Math.random() * 1.5 + 0.3 + (distanceFromCenter * 0.01);
-      mainOpacities[i] = Math.max(0.1, 1 - (distanceFromCenter * 0.015));
+      // Realistic size distribution - most particles very small, few large
+      const sizeRandom = Math.random();
+      if (sizeRandom < 0.7) {
+        // 70% tiny particles
+        mainSizes[i] = 0.1 + Math.random() * 0.3;
+      } else if (sizeRandom < 0.9) {
+        // 20% small particles
+        mainSizes[i] = 0.4 + Math.random() * 0.4;
+      } else {
+        // 10% larger particles (star clusters)
+        mainSizes[i] = 0.8 + Math.random() * 0.6;
+      }
+      
+      // Brightness varies with size and distance
+      const distanceFactor = Math.max(0.1, 1 - (distanceFromCenter * 0.008));
+      mainBrightness[i] = distanceFactor * (0.3 + mainSizes[i] * 0.7);
     }
     
-    // Dust cloud particles (more random, closer to scene)
+    // Dust cloud particles (very fine, close to photos)
     const dustPositions = new Float32Array(dustCount * 3);
     const dustVelocities = new Float32Array(dustCount * 3);
     const dustSizes = new Float32Array(dustCount);
     
     for (let i = 0; i < dustCount; i++) {
-      // Concentrate dust near the photo area but extend beyond
-      const dustRadius = Math.random() * 45 + 15;
-      const dustAngle = Math.random() * Math.PI * 2;
+      // Concentrate around photo area with exponential falloff
+      const radius = Math.pow(Math.random(), 2) * 50 + 10;
+      const angle = Math.random() * Math.PI * 2;
+      const height = (Math.random() - 0.5) * 30 + 15;
       
-      dustPositions[i * 3] = Math.cos(dustAngle) * dustRadius + (Math.random() - 0.5) * 20;
-      dustPositions[i * 3 + 1] = Math.random() * 25 + 5;
-      dustPositions[i * 3 + 2] = Math.sin(dustAngle) * dustRadius + (Math.random() - 0.5) * 20;
+      dustPositions[i * 3] = Math.cos(angle) * radius + (Math.random() - 0.5) * 15;
+      dustPositions[i * 3 + 1] = height;
+      dustPositions[i * 3 + 2] = Math.sin(angle) * radius + (Math.random() - 0.5) * 15;
       
-      dustVelocities[i * 3] = (Math.random() - 0.5) * 0.008;
-      dustVelocities[i * 3 + 1] = Math.random() * 0.005 + 0.002;
-      dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.008;
+      dustVelocities[i * 3] = (Math.random() - 0.5) * 0.003;
+      dustVelocities[i * 3 + 1] = Math.random() * 0.002 + 0.001;
+      dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.003;
       
-      dustSizes[i] = Math.random() * 0.8 + 0.2;
+      // Very fine dust particles
+      dustSizes[i] = 0.05 + Math.random() * 0.15;
     }
     
-    // Create asymmetric clusters at various distances and angles
+    // Create dense star clusters at various distances
     const clusterData = [];
     for (let c = 0; c < clusterCount; c++) {
+      const clusterDistance = 30 + Math.random() * 100;
+      const clusterAngle = Math.random() * Math.PI * 2;
+      const clusterHeight = (Math.random() - 0.5) * 60 + 20;
+      
       const clusterCenter = {
-        x: (Math.random() - 0.5) * 120,
-        y: Math.random() * 60 + 20,
-        z: (Math.random() - 0.5) * 120
+        x: Math.cos(clusterAngle) * clusterDistance,
+        y: clusterHeight,
+        z: Math.sin(clusterAngle) * clusterDistance
       };
       
       const clusterPositions = new Float32Array(particlesPerCluster * 3);
@@ -313,20 +331,25 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
       const clusterSizes = new Float32Array(particlesPerCluster);
       
       for (let i = 0; i < particlesPerCluster; i++) {
-        // Create organic cluster shape
-        const clusterRadius = Math.random() * 8 + 2;
-        const clusterAngle = Math.random() * Math.PI * 2;
-        const clusterHeight = (Math.random() - 0.5) * 6;
+        // Dense spherical distribution
+        const phi = Math.random() * Math.PI * 2;
+        const cosTheta = Math.random() * 2 - 1;
+        const u = Math.random();
+        const clusterRadius = Math.pow(u, 1/3) * (3 + Math.random() * 4); // Cubic root for sphere
         
-        clusterPositions[i * 3] = clusterCenter.x + Math.cos(clusterAngle) * clusterRadius;
-        clusterPositions[i * 3 + 1] = clusterCenter.y + clusterHeight;
-        clusterPositions[i * 3 + 2] = clusterCenter.z + Math.sin(clusterAngle) * clusterRadius;
+        const theta = Math.acos(cosTheta);
+        const r = clusterRadius;
         
-        clusterVelocities[i * 3] = (Math.random() - 0.5) * 0.003;
-        clusterVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.002;
-        clusterVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.003;
+        clusterPositions[i * 3] = clusterCenter.x + r * Math.sin(theta) * Math.cos(phi);
+        clusterPositions[i * 3 + 1] = clusterCenter.y + r * Math.cos(theta);
+        clusterPositions[i * 3 + 2] = clusterCenter.z + r * Math.sin(theta) * Math.sin(phi);
         
-        clusterSizes[i] = Math.random() * 1.2 + 0.4;
+        clusterVelocities[i * 3] = (Math.random() - 0.5) * 0.001;
+        clusterVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.001;
+        clusterVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.001;
+        
+        // Varied sizes within cluster
+        clusterSizes[i] = 0.2 + Math.random() * 0.5;
       }
       
       clusterData.push({
@@ -342,7 +365,7 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         positions: mainPositions,
         velocities: mainVelocities,
         sizes: mainSizes,
-        opacities: mainOpacities,
+        brightness: mainBrightness,
         count: mainCount
       },
       dust: {
@@ -644,14 +667,14 @@ const GradientBackground: React.FC = () => {
   );
 };
 
-// Smart auto-rotating camera with user interaction memory
+// Smart auto-rotating camera with continuous smooth rotation
 const SmartCameraControls: React.FC = () => {
   const controlsRef = useRef<any>();
   const { camera } = useThree();
   const isUserInteracting = useRef(false);
   const lastInteractionTime = useRef(0);
-  const lastUserPosition = useRef({ theta: 0, phi: 0, radius: 15 });
-  const autoRotationStartTime = useRef(0);
+  const continuousRotation = useRef({ theta: 0, phi: Math.PI / 2.5, radius: 15 });
+  const rotationSpeed = useRef(0.0001); // Base rotation speed
   const isMobile = useIsMobile();
 
   useFrame((state) => {
@@ -660,38 +683,23 @@ const SmartCameraControls: React.FC = () => {
     const currentTime = Date.now();
     const timeSinceInteraction = currentTime - lastInteractionTime.current;
     
-    // If user hasn't interacted for 3 seconds, resume auto-rotation
-    const shouldAutoRotate = !isUserInteracting.current && timeSinceInteraction > 3000;
+    // Always rotate, but slow down during interaction
+    const shouldAutoRotate = !isUserInteracting.current || timeSinceInteraction > 500;
     
     if (shouldAutoRotate || isMobile) {
-      // If just starting auto-rotation, record the current position
-      if (!autoRotationStartTime.current) {
-        autoRotationStartTime.current = currentTime;
-        
-        // Convert current camera position to spherical coordinates
-        const spherical = new THREE.Spherical();
-        spherical.setFromVector3(camera.position);
-        lastUserPosition.current = {
-          theta: spherical.theta,
-          phi: spherical.phi,
-          radius: spherical.radius
-        };
-      }
+      // Update the continuous rotation
+      continuousRotation.current.theta += rotationSpeed.current;
       
-      // Calculate auto-rotation progress
-      const autoTime = (currentTime - autoRotationStartTime.current) * 0.0001;
+      // Add subtle height variation
+      const time = currentTime * 0.0001;
+      const heightVariation = Math.sin(time * 2) * 0.8;
       
-      // Continue rotation from where user left off
-      const newTheta = lastUserPosition.current.theta + autoTime;
-      const phi = lastUserPosition.current.phi;
-      const radius = lastUserPosition.current.radius;
+      // Apply the rotation to camera position
+      const { theta, phi, radius } = continuousRotation.current;
       
-      // Apply smooth height variation
-      const heightVariation = Math.sin(autoTime * 2) * 1;
-      
-      camera.position.x = radius * Math.sin(phi) * Math.cos(newTheta);
+      camera.position.x = radius * Math.sin(phi) * Math.cos(theta);
       camera.position.y = radius * Math.cos(phi) + heightVariation;
-      camera.position.z = radius * Math.sin(phi) * Math.sin(newTheta);
+      camera.position.z = radius * Math.sin(phi) * Math.sin(theta);
       
       camera.lookAt(0, 0, 0);
     }
@@ -708,7 +716,7 @@ const SmartCameraControls: React.FC = () => {
       if (!isMobile) {
         isUserInteracting.current = true;
         lastInteractionTime.current = Date.now();
-        autoRotationStartTime.current = 0; // Reset auto-rotation timer
+        rotationSpeed.current = 0.00003; // Slow down during interaction
       }
     };
 
@@ -716,13 +724,26 @@ const SmartCameraControls: React.FC = () => {
       if (!isMobile) {
         isUserInteracting.current = false;
         lastInteractionTime.current = Date.now();
+        
+        // Update continuous rotation to match current camera position
+        const spherical = new THREE.Spherical();
+        spherical.setFromVector3(camera.position);
+        continuousRotation.current = {
+          theta: spherical.theta,
+          phi: spherical.phi,
+          radius: spherical.radius
+        };
+        
+        // Resume normal rotation speed
+        setTimeout(() => {
+          rotationSpeed.current = 0.0001;
+        }, 1000);
       }
     };
 
     const handleChange = () => {
-      if (!isMobile) {
+      if (!isMobile && isUserInteracting.current) {
         lastInteractionTime.current = Date.now();
-        autoRotationStartTime.current = 0; // Reset auto-rotation timer
       }
     };
 
@@ -735,7 +756,7 @@ const SmartCameraControls: React.FC = () => {
       controls.removeEventListener('end', handleEnd);
       controls.removeEventListener('change', handleChange);
     };
-  }, [isMobile]);
+  }, [isMobile, camera]);
 
   return (
     <OrbitControls
@@ -743,14 +764,14 @@ const SmartCameraControls: React.FC = () => {
       enablePan={false}
       enableZoom={true}
       enableRotate={!isMobile}
-      rotateSpeed={0.8}
-      zoomSpeed={0.6}
+      rotateSpeed={0.6}
+      zoomSpeed={0.4}
       minDistance={8}
-      maxDistance={25}
+      maxDistance={30}
       minPolarAngle={Math.PI / 8}
       maxPolarAngle={Math.PI - Math.PI / 8}
       enableDamping={true}
-      dampingFactor={0.08}
+      dampingFactor={0.1}
       autoRotate={false}
       touches={{
         ONE: isMobile ? THREE.TOUCH.NONE : THREE.TOUCH.ROTATE,

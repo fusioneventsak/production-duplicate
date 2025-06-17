@@ -555,11 +555,8 @@ const AutoRotatingCamera: React.FC = () => {
   );
 };
 
-// Scene component that brings everything together
-const Scene: React.FC = () => {
-  // State for particle theme
-  const [particleTheme, setParticleTheme] = React.useState(PARTICLE_THEMES[0]);
-
+// Scene component that brings everything together - ONLY 3D objects
+const Scene: React.FC<{ particleTheme: typeof PARTICLE_THEMES[0] }> = ({ particleTheme }) => {
   // Generate photo positions for 100 photos covering the entire floor plane
   const photoPositions = useMemo(() => {
     const positions: Array<{
@@ -615,23 +612,6 @@ const Scene: React.FC = () => {
 
   return (
     <>
-      {/* Particle Theme Controls - positioned outside Canvas */}
-      <div className="fixed top-4 right-4 z-50">
-        <div className="relative">
-          <button
-            onClick={() => {
-              const currentIndex = PARTICLE_THEMES.findIndex(theme => theme.name === particleTheme.name);
-              const nextIndex = (currentIndex + 1) % PARTICLE_THEMES.length;
-              setParticleTheme(PARTICLE_THEMES[nextIndex]);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-black/20 backdrop-blur-md border border-white/10 rounded-lg text-white hover:bg-black/30 transition-all duration-200 shadow-lg"
-            aria-label="Change particle colors"
-          >
-            <Palette size={20} />
-            <span className="hidden sm:inline">{particleTheme.name}</span>
-          </button>
-        </div>
-      </div>
 
       {/* Gradient Background Sphere */}
       <GradientBackground />
@@ -804,8 +784,29 @@ const LoadingFallback: React.FC = () => (
 );
 
 const HeroScene: React.FC = () => {
+  // State for particle theme - moved to main component
+  const [particleTheme, setParticleTheme] = React.useState(PARTICLE_THEMES[0]);
+
   return (
     <ErrorBoundary>
+      {/* Particle Theme Controls - positioned OUTSIDE Canvas */}
+      <div className="fixed top-4 right-4 z-50">
+        <div className="relative">
+          <button
+            onClick={() => {
+              const currentIndex = PARTICLE_THEMES.findIndex(theme => theme.name === particleTheme.name);
+              const nextIndex = (currentIndex + 1) % PARTICLE_THEMES.length;
+              setParticleTheme(PARTICLE_THEMES[nextIndex]);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-black/20 backdrop-blur-md border border-white/10 rounded-lg text-white hover:bg-black/30 transition-all duration-200 shadow-lg"
+            aria-label="Change particle colors"
+          >
+            <Palette size={20} />
+            <span className="hidden sm:inline">{particleTheme.name}</span>
+          </button>
+        </div>
+      </div>
+
       {/* CRITICAL: Fixed mobile scrolling by ensuring proper touch handling */}
       <div 
         className="absolute inset-0 w-full h-full"
@@ -838,7 +839,7 @@ const HeroScene: React.FC = () => {
           }}
         >
           <Suspense fallback={<LoadingFallback />}>
-            <Scene />
+            <Scene particleTheme={particleTheme} />
           </Suspense>
         </Canvas>
       </div>

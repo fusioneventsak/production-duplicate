@@ -671,7 +671,7 @@ const PhotoboothPage: React.FC = () => {
                 </div>
               ) : (
                 /* Camera View */
-                <div className="relative aspect-video bg-gray-800">
+                <div className="relative aspect-video lg:aspect-video md:aspect-[3/4] sm:aspect-[3/4] aspect-[3/4] bg-gray-800">
                   {/* Video Element */}
                   <video
                     ref={videoRef}
@@ -719,6 +719,30 @@ const PhotoboothPage: React.FC = () => {
                     </div>
                   )}
                   
+                  {/* Text Overlay Input - Mobile */}
+                  <div className="absolute top-4 left-4 right-4 lg:hidden">
+                    <textarea
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      placeholder="Add text to your photo..."
+                      className="w-full h-20 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-white placeholder-gray-300 resize-none focus:outline-none focus:border-purple-500 text-sm"
+                      maxLength={100}
+                    />
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-gray-300">
+                        {text.length}/100
+                      </span>
+                      {text && (
+                        <button
+                          onClick={() => setText('')}
+                          className="text-xs text-red-300 hover:text-red-200 transition-colors"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
                   {/* Text Overlay Preview */}
                   {text.trim() && cameraState === 'active' && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -753,9 +777,9 @@ const PhotoboothPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Controls Panel */}
-          <div className="space-y-6">
-            {/* Text Overlay */}
+          {/* Controls Panel - Desktop Only */}
+          <div className="space-y-6 hidden lg:block">
+            {/* Text Overlay - Desktop */}
             <div className="bg-gray-900 rounded-lg p-6">
               <div className="flex items-center space-x-2 mb-4">
                 <Type className="w-5 h-5 text-purple-400" />
@@ -820,6 +844,39 @@ const PhotoboothPage: React.FC = () => {
                 <p>2. Add optional text overlay</p>
                 <p>3. Click the white button to take a photo</p>
                 <p>4. Review and upload to the collage</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Camera Controls */}
+          <div className="lg:hidden space-y-4">
+            {/* Camera Settings - Mobile */}
+            {devices.length > 1 && (
+              <div className="bg-gray-900 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-medium">Camera:</span>
+                  <select
+                    value={selectedDevice}
+                    onChange={(e) => handleDeviceChange(e.target.value)}
+                    className="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-white text-sm focus:outline-none focus:border-purple-500"
+                  >
+                    {devices.map((device, index) => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label || `Camera ${index + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Instructions - Mobile */}
+            <div className="bg-gray-900 rounded-lg p-4">
+              <h3 className="text-white font-semibold mb-2">Quick Guide</h3>
+              <div className="text-sm text-gray-300 space-y-1">
+                <p>• Add text in the field above the camera</p>
+                <p>• Tap the white button to take a photo</p>
+                <p>• Upload to add it to the collage</p>
               </div>
             </div>
           </div>

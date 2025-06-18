@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users } from 'lucide-react';
+import { Users, LogIn } from 'lucide-react';
 import DemoRequestModal from '../modals/DemoRequestModal';
 
 const Header: React.FC = () => {
@@ -28,6 +28,14 @@ const Header: React.FC = () => {
               >
                 <Users className="h-4 w-4 mr-1" />
                 Join Collage
+              </Link>
+              
+              <Link
+                to="/login"
+                className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-purple-500/20 hover:text-white transition-colors flex items-center"
+              >
+                <LogIn className="h-4 w-4 mr-1" />
+                Login
               </Link>
               
               <button

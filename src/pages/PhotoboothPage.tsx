@@ -1,4 +1,4 @@
-// src/pages/PhotoboothPage.tsx - FIXED: Case-insensitive code handling
+// src/pages/PhotoboothPage.tsx - FIXED: Mobile zoom prevention & larger capture button
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera, SwitchCamera, Download, Send, X, RefreshCw, Type, ArrowLeft, Settings } from 'lucide-react';
@@ -347,29 +347,33 @@ const PhotoboothPage: React.FC = () => {
       0, 0, canvasWidth, canvasHeight // Destination rectangle (full canvas)
     );
 
-    // Add text overlay if provided
+    // Add text overlay if provided with dynamic sizing
     if (text.trim()) {
-      const fontSize = Math.min(canvasWidth, canvasHeight) * 0.06; // Smaller font for 9:16
+      // Dynamic font size calculation - starts large and gets smaller with longer text
+      const baseSize = Math.min(canvasWidth, canvasHeight) * 0.12; // Larger base size
+      const dynamicSize = Math.max(baseSize * 0.4, baseSize - (text.length * 1.5)); // Dynamic scaling
+      const fontSize = dynamicSize;
+      
       context.font = `bold ${fontSize}px Arial`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       
-      // Add shadow for better readability
-      context.shadowColor = 'rgba(0,0,0,0.8)';
-      context.shadowBlur = 4;
-      context.shadowOffsetX = 2;
-      context.shadowOffsetY = 2;
+      // Enhanced shadow for better readability
+      context.shadowColor = 'rgba(0,0,0,0.9)';
+      context.shadowBlur = 8;
+      context.shadowOffsetX = 3;
+      context.shadowOffsetY = 3;
       
-      // White text with black outline
+      // White text with stronger black outline
       context.strokeStyle = 'black';
-      context.lineWidth = fontSize * 0.1;
+      context.lineWidth = fontSize * 0.08;
       context.fillStyle = 'white';
       
       // Split text into lines if too long
-      const maxWidth = canvasWidth * 0.9;
+      const maxWidth = canvasWidth * 0.85; // Slightly more padding
       const words = text.split(' ');
       const lines: string[] = [];
-      let currentLine = words[0];
+      let currentLine = words[0] || '';
 
       for (let i = 1; i < words.length; i++) {
         const word = words[i];
@@ -381,10 +385,10 @@ const PhotoboothPage: React.FC = () => {
           currentLine = word;
         }
       }
-      lines.push(currentLine);
+      if (currentLine) lines.push(currentLine);
 
-      // Draw each line
-      const lineHeight = fontSize * 1.2;
+      // Draw each line with improved spacing
+      const lineHeight = fontSize * 1.1;
       const totalHeight = lines.length * lineHeight;
       const startY = (canvasHeight - totalHeight) / 2 + fontSize / 2;
 
@@ -392,7 +396,9 @@ const PhotoboothPage: React.FC = () => {
         const textY = startY + index * lineHeight;
         const textX = canvasWidth / 2;
         
+        // Draw outline first
         context.strokeText(line, textX, textY);
+        // Then fill text
         context.fillText(line, textX, textY);
       });
       
@@ -702,7 +708,7 @@ const PhotoboothPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                /* Camera View - 9:16 aspect ratio, smaller on mobile */
+                /* Camera View - 9:16 aspect ratio */
                 <div className="relative aspect-[9/16] bg-gray-800">
                   {/* Video Element */}
                   <video
@@ -751,38 +757,15 @@ const PhotoboothPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Text Overlay Input - All devices */}
-                  <div className="absolute top-2 left-2 right-2 lg:top-3 lg:left-3 lg:right-3">
-                    <textarea
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      placeholder="Add text to your photo..."
-                      className="w-full h-12 lg:h-16 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-2 py-1.5 lg:px-3 lg:py-2 text-white placeholder-gray-300 resize-none focus:outline-none focus:border-purple-500 text-xs lg:text-sm"
-                      maxLength={100}
-                    />
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-xs text-gray-300">
-                        {text.length}/100
-                      </span>
-                      {text && (
-                        <button
-                          onClick={() => setText('')}
-                          className="text-xs text-red-300 hover:text-red-200 transition-colors"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
                   {/* Text Overlay Preview */}
                   {text.trim() && cameraState === 'active' && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-4">
                       <div 
-                        className="text-white font-bold text-center px-3 py-2 bg-black/50 rounded-lg max-w-[85%]"
+                        className="text-white font-bold text-center px-4 py-3 bg-black/60 backdrop-blur-sm rounded-xl max-w-[90%] border border-white/20"
                         style={{ 
-                          fontSize: 'clamp(0.75rem, 3vw, 1.25rem)',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                          fontSize: `${Math.max(1.5, 4 - (text.length / 20))}rem`,
+                          textShadow: '3px 3px 6px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.5)',
+                          lineHeight: '1.2'
                         }}
                       >
                         {text}
@@ -790,14 +773,40 @@ const PhotoboothPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Capture Button */}
+                  {/* FIXED: Text Input Field - Positioned above capture button */}
+                  <div className="absolute bottom-28 sm:bottom-24 lg:bottom-20 left-2 right-2 px-2">
+                    <textarea
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      placeholder="Add text to your photo..."
+                      className="w-full h-10 sm:h-12 bg-black/70 backdrop-blur-sm border border-white/30 rounded-lg px-3 py-2 text-white placeholder-gray-300 resize-none focus:outline-none focus:border-purple-400 focus:bg-black/80 transition-all"
+                      style={{ fontSize: '16px' }} // CRITICAL: Prevents iOS zoom
+                      maxLength={100}
+                    />
+                    <div className="flex justify-between items-center mt-1 px-1">
+                      <span className="text-xs text-gray-300">
+                        {text.length}/100
+                      </span>
+                      {text && (
+                        <button
+                          onClick={() => setText('')}
+                          className="text-xs text-red-300 hover:text-red-200 transition-colors px-2 py-1"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* FIXED: Larger Capture Button for better mobile usability */}
                   {cameraState === 'active' && (
-                    <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
                       <button
                         onClick={capturePhoto}
-                        className="w-12 h-12 lg:w-14 lg:h-14 bg-white rounded-full border-4 border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center"
+                        className="w-20 h-20 sm:w-16 sm:h-16 lg:w-14 lg:h-14 bg-white rounded-full border-4 border-gray-300 hover:border-gray-400 transition-all active:scale-95 flex items-center justify-center shadow-lg"
+                        style={{ touchAction: 'manipulation' }} // Prevents double-tap zoom
                       >
-                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gray-300 rounded-full"></div>
+                        <div className="w-14 h-14 sm:w-10 sm:h-10 lg:w-8 lg:h-8 bg-gray-300 rounded-full"></div>
                       </button>
                     </div>
                   )}
@@ -826,7 +835,8 @@ const PhotoboothPage: React.FC = () => {
                   <select
                     value={selectedDevice}
                     onChange={(e) => handleDeviceChange(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500 text-sm"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                    style={{ fontSize: '16px' }} // CRITICAL: Prevents iOS zoom
                   >
                     {devices.map((device, index) => (
                       <option key={device.deviceId} value={device.deviceId}>
@@ -843,8 +853,8 @@ const PhotoboothPage: React.FC = () => {
               <h3 className="text-base lg:text-lg font-semibold text-white mb-3 lg:mb-4">How to use</h3>
               <div className="space-y-2 text-sm text-gray-300">
                 <p>1. Allow camera access when prompted</p>
-                <p>2. Add text in the field above the camera</p>
-                <p>3. Tap the white button to take a photo</p>
+                <p>2. Add text in the field above the capture button</p>
+                <p>3. Tap the large white button to take a photo</p>
                 <p>4. Review and upload to the collage</p>
               </div>
             </div>
@@ -855,7 +865,8 @@ const PhotoboothPage: React.FC = () => {
               <div className="space-y-2 text-sm text-purple-200">
                 <p>• Hold your device steady for clearer photos</p>
                 <p>• Make sure you have good lighting</p>
-                <p>• Text will appear centered on your photo</p>
+                <p>• Text gets larger with shorter messages</p>
+                <p>• Text appears centered and easy to read</p>
                 <p>• Photos appear in the collage automatically</p>
               </div>
             </div>

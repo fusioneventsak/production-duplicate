@@ -1,798 +1,487 @@
-// src/pages/PhotoboothPage.tsx
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Camera, SwitchCamera, Download, Send, X, RefreshCw, Type, ArrowLeft, Settings } from 'lucide-react';
-import { useCollageStore, Photo } from '../store/collageStore';
-import Layout from '../components/layout/Layout';
+import React, { useRef, useMemo, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { Suspense } from 'react';
+import * as THREE from 'three';
+import { Palette } from 'lucide-react';
 
-type VideoDevice = {
-  deviceId: string;
-  label: string;
+// Mobile detection hook
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // Tailwind's md breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  return isMobile;
 };
 
-type CameraState = 'idle' | 'starting' | 'active' | 'error';
+// 100 Fun party and event photos - groups celebrating, dancing, parties, events, photobooths, selfies (vertical format)
+const DEMO_PHOTOS = [
+  'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400&h=600&fit=crop&crop=center', // group celebration
+  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=600&fit=crop&crop=center', // party dancing
+  'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=600&fit=crop&crop=center', // concert crowd
+  'https://images.unsplash.com/photo-1566492031773-4f4e44671d66?w=400&h=600&fit=crop&crop=center', // group selfie
+  'https://images.unsplash.com/photo-1574391884720-bbc049ec09ad?w=400&h=600&fit=crop&crop=center', // party celebration
+  'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop&crop=center', // nightlife party
+  'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop&crop=center', // concert audience
+  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=600&fit=crop&crop=center', // group celebration
+  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=600&fit=crop&crop=center', // party fun
+  'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=400&h=600&fit=crop&crop=center', // group celebration
+  'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=400&h=600&fit=crop&crop=center', // party dancing
+  'https://images.unsplash.com/photo-1520637836862-4d197d17c13a?w=400&h=600&fit=crop&crop=center', // nightclub party
+  'https://images.unsplash.com/photo-1492447166138-50c3889fccb1?w=400&h=600&fit=crop&crop=center', // friends celebrating
+  'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=400&h=600&fit=crop&crop=center', // group party
+  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=600&fit=crop&crop=center', // celebration cheers
+  'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=600&fit=crop&crop=center', // party dancing
+  'https://images.unsplash.com/photo-1516307365426-bea591f05011?w=400&h=600&fit=crop&crop=center', // concert party
+  'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=600&fit=crop&crop=center', // group celebration
+  'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=600&fit=crop&crop=center', // party crowd
+  'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&h=600&fit=crop&crop=center', // celebration event
+  'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&h=600&fit=crop&crop=center', // birthday party
+  'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=600&fit=crop&crop=center', // party celebration
+  'https://images.unsplash.com/photo-1485872299829-c673f5194813?w=400&h=600&fit=crop&crop=center', // group fun
+  'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=600&fit=crop&crop=center', // celebration party
+  'https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=400&h=600&fit=crop&crop=center', // nightlife party
+  'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=600&fit=crop&crop=center', // party celebration
+  'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=400&h=600&fit=crop&crop=center', // group celebration
+  'https://images.unsplash.com/photo-1530023367847-a683933f4172?w=400&h=600&fit=crop&crop=center', // birthday party
+  'https://images.unsplash.com/photo-1519214605650-76a613ee3245?w=400&h=600&fit=crop&crop=center', // wedding celebration
+  'https://images.unsplash.com/photo-1524159179951-0145ebc03e42?w=400&h=600&fit=crop&crop=center', // party fun
+  'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400&h=600&fit=crop&crop=center', // concert lights
+  'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=600&fit=crop&crop=center', // party celebration
+  'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=600&fit=crop&crop=center', // people cheering
+  'https://images.unsplash.com/photo-1564865878688-9a244444042a?w=400&h=600&fit=crop&crop=center', // group selfie
+  'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=600&fit=crop&crop=center', // food party
+  'https://images.unsplash.com/photo-1567446537708-ac4aa75c9c28?w=400&h=600&fit=crop&crop=center', // group celebration
+  'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=600&fit=crop&crop=center', // graduation party
+  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=600&fit=crop&crop=center', // business celebration
+  'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?w=400&h=600&fit=crop&crop=center', // outdoor party
+  'https://images.unsplash.com/photo-1496843916299-590492c751f4?w=400&h=600&fit=crop&crop=center', // festival crowd
+  'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=600&fit=crop&crop=center', // wedding party
+  'https://images.unsplash.com/photo-1583394838340-0c5c0d6d7d5b?w=400&h=600&fit=crop&crop=center', // party celebration
+  'https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=400&h=600&fit=crop&crop=center', // group selfie
+  'https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?w=400&h=600&fit=crop&crop=center', // celebration
+  'https://images.unsplash.com/photo-1520986734961-6a681fdd0c9f?w=400&h=600&fit=crop&crop=center', // party friends
+  'https://images.unsplash.com/photo-1588392382834-a891154bca4d?w=400&h=600&fit=crop&crop=center', // group celebration
+  'https://images.unsplash.com/photo-1589652717406-1c69efaf1ff8?w=400&h=600&fit=crop&crop=center', // party celebration
+  'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=400&h=600&fit=crop&crop=center', // group selfie
+  'https://images.unsplash.com/photo-1592650450938-4d8b4b8c7c3b?w=400&h=600&fit=crop&crop=center', // celebration
+  'https://images.unsplash.com/photo-1594736797933-d0401ba5f9e4?w=400&h=600&fit=crop&crop=center', // party fun
+  'https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=400&h=600&fit=crop&crop=center', // group celebration
+];
 
-const PhotoboothPage: React.FC = () => {
-  const { code } = useParams<{ code: string }>();
-  const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const isInitializingRef = useRef(false);
+// Fun comments that might appear on photos in a real collage
+const PHOTO_COMMENTS = [
+  "This is so much fun! 🎉",
+  "Best night ever! ✨",
+  "Squad goals! 💖",
+  "Making memories! 📸",
+  "Party vibes! 🕺",
+  "Love this moment! ❤️",
+  "Can't stop laughing! 😂",
+  "Epic celebration! 🎊",
+  "Good times! 🌟",
+  "So happy right now! 😊",
+  "Unforgettable! 🙌",
+  "Living our best life! 💃"
+];
+
+// Particle color themes
+const PARTICLE_THEMES = [
+  { name: 'Purple Magic', primary: '#8b5cf6', secondary: '#a855f7', accent: '#c084fc' },
+  { name: 'Ocean Breeze', primary: '#06b6d4', secondary: '#0891b2', accent: '#67e8f9' },
+  { name: 'Sunset Glow', primary: '#f59e0b', secondary: '#d97706', accent: '#fbbf24' },
+  { name: 'Forest Dream', primary: '#10b981', secondary: '#059669', accent: '#34d399' },
+  { name: 'Rose Petals', primary: '#ec4899', secondary: '#db2777', accent: '#f9a8d4' },
+  { name: 'Electric Blue', primary: '#3b82f6', secondary: '#2563eb', accent: '#93c5fd' },
+  { name: 'Cosmic Red', primary: '#ef4444', secondary: '#dc2626', accent: '#fca5a5' }
+];
+
+interface PhotoProps {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  imageUrl: string;
+  index: number;
+}
+
+const FloatingPhoto: React.FC<PhotoProps> = ({ position, rotation, imageUrl, index }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const [texture, setTexture] = React.useState<THREE.Texture | null>(null);
+  const [isLoaded, setIsLoaded] = React.useState(false);
   
-  const [devices, setDevices] = useState<VideoDevice[]>([]);
-  const [selectedDevice, setSelectedDevice] = useState<string>('');
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [text, setText] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [cameraState, setCameraState] = useState<CameraState>('idle');
+  // Randomly decide if this photo should have a comment (about 40% chance)
+  const hasComment = React.useMemo(() => Math.random() < 0.4, []);
+  const comment = React.useMemo(() => 
+    hasComment ? PHOTO_COMMENTS[index % PHOTO_COMMENTS.length] : null, 
+    [hasComment, index]
+  );
   
-  const { currentCollage, fetchCollageByCode, uploadPhoto, setupRealtimeSubscription, cleanupRealtimeSubscription } = useCollageStore();
+  // Load texture with error handling - only show if successfully loaded
+  React.useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      imageUrl,
+      (loadedTexture) => {
+        loadedTexture.minFilter = THREE.LinearFilter;
+        loadedTexture.magFilter = THREE.LinearFilter;
+        loadedTexture.colorSpace = THREE.SRGBColorSpace;
+        loadedTexture.anisotropy = 16;
+        setTexture(loadedTexture);
+        setIsLoaded(true);
+      },
+      undefined,
+      (error) => {
+        console.warn('Failed to load texture:', imageUrl, error);
+        setIsLoaded(false);
+      }
+    );
+  }, [imageUrl]);
 
-  const cleanupCamera = useCallback(() => {
-    console.log('🧹 Cleaning up camera...');
+  // Create text texture for comments
+  const textTexture = React.useMemo(() => {
+    if (!comment) return null;
     
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        console.log('🛑 Stopping track:', track.kind, track.label);
-        track.stop();
-        track.enabled = false;
-      });
-      streamRef.current = null;
-    }
-    
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-      videoRef.current.pause();
-      // Force cleanup
-      videoRef.current.load();
-    }
-    
-    setCameraState('idle');
-  }, []);
-
-  const getVideoDevices = useCallback(async (): Promise<VideoDevice[]> => {
-    try {
-      const allDevices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = allDevices
-        .filter(device => device.kind === 'videoinput')
-        .map(device => ({
-          deviceId: device.deviceId,
-          label: device.label || `Camera ${device.deviceId}`
-        }));
-      
-      console.log('📹 Available video devices:', videoDevices);
-      return videoDevices;
-    } catch (error) {
-      console.warn('⚠️ Could not enumerate devices:', error);
-      return [];
-    }
-  }, []);
-
-  const startCamera = useCallback(async (deviceId?: string) => {
-    // Prevent multiple simultaneous initializations
-    if (isInitializingRef.current) {
-      console.log('🔄 Camera initialization already in progress, skipping...');
-      return;
-    }
-
-    console.log('🎥 Starting camera initialization with device:', deviceId);
-    isInitializingRef.current = true;
-    setCameraState('starting');
-    setError(null);
-
-    try {
-      // Clean up any existing camera first
-      cleanupCamera();
-
-      // Longer delay to ensure cleanup is complete
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Detect platform
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isAndroid = /Android/.test(navigator.userAgent);
-      const isMobile = isIOS || isAndroid;
-      
-      console.log('📱 Platform detected:', { isIOS, isAndroid, isMobile });
-      
-      // Build constraints based on platform - maintain natural aspect ratio
-      let constraints: MediaStreamConstraints;
-      
-      if (deviceId) {
-        constraints = {
-          video: {
-            deviceId: { exact: deviceId },
-            facingMode: "user",
-            // Don't force specific dimensions - let camera use natural resolution
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        };
-      } else {
-        constraints = {
-          video: {
-            facingMode: "user",
-            // Use natural camera resolution
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        };
-      }
-      
-      console.log('🔧 Using constraints:', constraints);
-      
-      // Get user media with retry logic
-      let mediaStream;
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (firstAttemptError) {
-        console.warn('⚠️ First attempt failed, trying fallback constraints...', firstAttemptError);
-        
-        // Try with simpler constraints
-        const fallbackConstraints = {
-          video: { facingMode: "user" },
-          audio: false
-        };
-        
-        mediaStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
-      }
-      
-      console.log('✅ Got media stream:', mediaStream.active);
-      
-      // Update devices list after getting permission
-      const videoDevices = await getVideoDevices();
-      setDevices(videoDevices);
-      
-      // Auto-select front camera on mobile if not already selected
-      if (!selectedDevice && videoDevices.length > 0 && isMobile) {
-        const frontCamera = videoDevices.find(device => 
-          device.label.toLowerCase().includes('front') ||
-          device.label.toLowerCase().includes('user') ||
-          device.label.toLowerCase().includes('selfie') ||
-          device.label.toLowerCase().includes('facetime')
-        );
-        
-        if (frontCamera) {
-          console.log('📱 Auto-selecting front camera:', frontCamera.label);
-          setSelectedDevice(frontCamera.deviceId);
-        } else {
-          setSelectedDevice(videoDevices[0].deviceId);
-        }
-      }
-      
-      // Set up video element
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        
-        // Setup event listeners
-        const video = videoRef.current;
-        
-        const handleLoadedMetadata = () => {
-          console.log('📹 Video metadata loaded, playing...');
-          video.play().then(() => {
-            streamRef.current = mediaStream;
-            setCameraState('active');
-            console.log('✅ Camera active and streaming');
-          }).catch(playErr => {
-            console.error('❌ Failed to play video:', playErr);
-            setCameraState('error');
-            setError('Failed to start video playback');
-          });
-        };
-        
-        video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
-        
-        // Timeout fallback
-        setTimeout(() => {
-          if (cameraState === 'starting') {
-            console.log('⏰ Camera start timeout, forcing play...');
-            video.play().catch(console.error);
-          }
-        }, 3000);
-      }
-      
-    } catch (err: any) {
-      console.error('❌ Camera initialization failed:', err);
-      setCameraState('error');
-      
-      let errorMessage = 'Failed to access camera. ';
-      
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        errorMessage = 'Camera access denied. Please allow camera access and refresh the page.';
-      } else if (err.name === 'NotFoundError') {
-        errorMessage = 'No camera found. Please check your camera and try again.';
-      } else if (err.name === 'NotReadableError') {
-        errorMessage = 'Camera is busy or in use by another application. Please close other apps using the camera and try again.';
-      } else if (err.name === 'OverconstrainedError') {
-        // Try fallback constraints
-        try {
-          console.log('🔄 Trying fallback constraints...');
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "user" }, 
-            audio: false 
-          });
-          
-          if (videoRef.current) {
-            videoRef.current.srcObject = fallbackStream;
-            await videoRef.current.play();
-            streamRef.current = fallbackStream;
-            setCameraState('active');
-            setError(null);
-            console.log('✅ Fallback camera working');
-            return;
-          }
-        } catch (fallbackError) {
-          console.error('❌ Fallback also failed:', fallbackError);
-          errorMessage = 'Camera not compatible with this device.';
-        }
-      } else {
-        errorMessage += err.message || 'Unknown camera error.';
-      }
-      
-      setError(errorMessage);
-    } finally {
-      isInitializingRef.current = false;
-    }
-  }, [selectedDevice, cameraState, cleanupCamera, getVideoDevices]);
-
-  const switchCamera = useCallback(() => {
-    if (devices.length <= 1) return;
-    
-    const currentIndex = devices.findIndex(d => d.deviceId === selectedDevice);
-    const nextIndex = (currentIndex + 1) % devices.length;
-    handleDeviceChange(devices[nextIndex].deviceId);
-  }, [devices, selectedDevice]);
-
-  // Load collage on mount
-  useEffect(() => {
-    if (code) {
-      fetchCollageByCode(code);
-    }
-  }, [code, fetchCollageByCode]);
-
-  // Setup realtime subscription when collage is loaded
-  useEffect(() => {
-    if (currentCollage?.id) {
-      console.log('🔄 Setting up realtime subscription in photobooth for collage:', currentCollage.id);
-      setupRealtimeSubscription(currentCollage.id);
-    }
-    
-    return () => {
-      cleanupRealtimeSubscription();
-    };
-  }, [currentCollage?.id, setupRealtimeSubscription, cleanupRealtimeSubscription]);
-
-  // Initialize camera when component mounts and when returning from photo view
-  useEffect(() => {
-    if (!photo && cameraState === 'idle' && !isInitializingRef.current) {
-      console.log('🚀 Initializing camera...');
-      const timer = setTimeout(() => {
-        startCamera(selectedDevice);
-      }, 200);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [photo, cameraState, startCamera, selectedDevice]);
-
-  // Cleanup on unmount and when switching devices
-  useEffect(() => {
-    return () => {
-      console.log('🧹 Component unmounting, cleaning up...');
-      cleanupCamera();
-    };
-  }, [cleanupCamera]);
-
-  // Also cleanup when device changes
-  useEffect(() => {
-    return () => {
-      if (selectedDevice) {
-        console.log('🔄 Device changed, cleaning up old camera...');
-        cleanupCamera();
-      }
-    };
-  }, [selectedDevice, cleanupCamera]);
-
-  // Handle visibility change
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        console.log('📱 Page hidden, pausing camera...');
-      } else {
-        console.log('📱 Page visible, resuming camera...');
-        if (!photo && cameraState === 'idle') {
-          setTimeout(() => startCamera(selectedDevice), 100);
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [photo, cameraState, startCamera, selectedDevice]);
-
-  const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current || cameraState !== 'active') return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
+    const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-
-    if (!context) return;
-
-    // Use the video's natural dimensions to avoid distortion
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
+    if (!context) return null;
     
-    // Calculate portrait dimensions (9:16 aspect ratio)
-    let captureWidth, captureHeight;
-    const targetAspectRatio = 9 / 16;
-    const videoAspectRatio = videoWidth / videoHeight;
+    canvas.width = 512;
+    canvas.height = 128;
     
-    if (videoAspectRatio > targetAspectRatio) {
-      // Video is wider than target, crop width
-      captureHeight = videoHeight;
-      captureWidth = videoHeight * targetAspectRatio;
-    } else {
-      // Video is taller than target, crop height  
-      captureWidth = videoWidth;
-      captureHeight = videoWidth / targetAspectRatio;
-    }
+    context.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Center the crop
-    const startX = (videoWidth - captureWidth) / 2;
-    const startY = (videoHeight - captureHeight) / 2;
-
-    canvas.width = captureWidth;
-    canvas.height = captureHeight;
-
-    // Draw the video frame - handle mirroring and cropping
-    context.save();
-    context.scale(-1, 1); // Mirror horizontally
-    context.drawImage(
-      video, 
-      startX, startY, captureWidth, captureHeight, // Source crop
-      -captureWidth, 0, captureWidth, captureHeight // Destination (mirrored)
-    );
-    context.restore();
-
-    // Add text overlay if provided
-    if (text.trim()) {
-      const fontSize = Math.min(canvas.width, canvas.height) * 0.05; // Smaller font size
-      context.font = `bold ${fontSize}px Arial`;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      
-      // Add shadow for better readability
-      context.shadowColor = 'rgba(0,0,0,0.9)';
-      context.shadowBlur = 3;
-      context.shadowOffsetX = 2;
-      context.shadowOffsetY = 2;
-      
-      // White text with black outline
-      context.strokeStyle = 'black';
-      context.lineWidth = fontSize * 0.08;
-      context.fillStyle = 'white';
-      
-      // Split text into words and handle line breaks
-      const maxWidth = canvas.width * 0.85; // Slightly narrower
-      const words = text.split(' ');
-      const lines: string[] = [];
-      let currentLine = words[0] || '';
-
-      for (let i = 1; i < words.length; i++) {
-        const word = words[i];
-        const testLine = currentLine + ' ' + word;
-        const width = context.measureText(testLine).width;
-        if (width < maxWidth && lines.length < 1) { // Limit to 2 lines max
-          currentLine = testLine;
-        } else {
-          lines.push(currentLine);
-          currentLine = word;
-        }
-      }
-      lines.push(currentLine);
-
-      // Draw text in lower third position (matching preview and final photo)
-      const lineHeight = fontSize * 1.2;
-      const totalHeight = lines.length * lineHeight;
-      const textY = canvas.height - 120 - (totalHeight / 2); // Position in lower third to match preview
-      const textX = canvas.width / 2;
-
-      lines.forEach((line, index) => {
-        const y = textY + (index * lineHeight);
-        context.strokeText(line, textX, y);
-        context.fillText(line, textX, y);
-      });
-      
-      // Reset shadow
-      context.shadowColor = 'transparent';
-      context.shadowBlur = 0;
-      context.shadowOffsetX = 0;
-      context.shadowOffsetY = 0;
-    }
-
-    const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
-    setPhoto(dataUrl);
+    context.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    context.beginPath();
+    context.roundRect(10, 10, canvas.width - 20, canvas.height - 20, 15);
+    context.fill();
     
-    // Stop camera after taking photo to free up resources
-    cleanupCamera();
-  }, [text, cameraState, cleanupCamera]);
-
-  const uploadToCollage = useCallback(async () => {
-    if (!photo || !currentCollage) return;
-
-    setUploading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(photo);
-      const blob = await response.blob();
-      const file = new File([blob], 'photobooth.jpg', { type: 'image/jpeg' });
-
-      const result = await uploadPhoto(currentCollage.id, file);
-      if (result) {        
-        // Reset state
-        setPhoto(null);
-        setText('');
-        
-        // Show success message
-        setError('Photo uploaded successfully! Your photo will appear in the collage automatically.');
-        setTimeout(() => setError(null), 3000);
-        
-        // Restart camera after a brief delay
-        setTimeout(() => {
-          console.log('🔄 Restarting camera after upload...');
-          startCamera(selectedDevice);
-        }, 500);
-        
-      } else {
-        throw new Error('Failed to upload photo');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload photo');
-    } finally {
-      setUploading(false);
-    }
-  }, [photo, currentCollage, uploadPhoto, startCamera, selectedDevice]);
-
-  const downloadPhoto = useCallback(() => {
-    if (!photo) return;
-    const link = document.createElement('a');
-    link.href = photo;
-    link.download = 'photobooth.jpg';
-    link.click();
-  }, [photo]);
-
-  const retakePhoto = useCallback(() => {
-    setPhoto(null);
-    setText('');
+    context.fillStyle = 'white';
+    context.font = 'bold 28px Arial, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(comment, canvas.width / 2, canvas.height / 2);
     
-    // Restart camera immediately
-    setTimeout(() => {
-      console.log('🔄 Restarting camera after retake...');
-      startCamera(selectedDevice);
-    }, 100);
-  }, [startCamera, selectedDevice]);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return tex;
+  }, [comment]);
 
-  const handleDeviceChange = useCallback((newDeviceId: string) => {
-    if (newDeviceId === selectedDevice) return;
+  useFrame((state) => {
+    if (!groupRef.current) return;
     
-    setSelectedDevice(newDeviceId);
+    const time = state.clock.getElapsedTime();
+    const floatOffset = Math.sin(time * 0.5 + index * 0.5) * 0.3;
     
-    // Only restart camera if we're currently showing the camera view
-    if (!photo && cameraState !== 'starting') {
-      console.log('📱 Device changed, restarting camera...');
-      startCamera(newDeviceId);
-    }
-  }, [selectedDevice, photo, cameraState, startCamera]);
+    groupRef.current.lookAt(state.camera.position);
+    
+    const rotationOffset = Math.sin(time * 0.3 + index * 0.3) * 0.05;
+    groupRef.current.rotation.z += rotationOffset;
+    
+    groupRef.current.position.y = position[1] + floatOffset;
+  });
 
-  if (!currentCollage) {
-    return (
-      <Layout>
-        <div className="min-h-[calc(100vh-160px)] flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-4"></div>
-            <p className="text-white">Loading photobooth...</p>
-          </div>
-        </div>
-      </Layout>
-    );
+  if (!isLoaded || !texture) {
+    return null;
   }
 
   return (
-    <Layout>
-      <div className="min-h-[calc(100vh-160px)] flex flex-col">
-        {/* Header - Compact */}
-        <div className="flex items-center justify-between p-4 lg:px-8 lg:py-6 border-b border-gray-800">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => navigate(`/collage/${currentCollage.code}`)}
-              className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-lg lg:text-xl font-bold text-white flex items-center space-x-2">
-                <Camera className="w-5 h-5 text-purple-500" />
-                <span>Photobooth</span>
-              </h1>
-              <p className="text-xs lg:text-sm text-gray-400">{currentCollage.name} • {currentCollage.code}</p>
-            </div>
-          </div>
-          
-          {/* Camera Switch Button */}
-          {!photo && devices.length > 1 && (
-            <button
-              onClick={switchCamera}
-              className="p-2 lg:p-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-              title="Switch Camera"
-            >
-              <SwitchCamera className="w-4 h-4 lg:w-5 lg:h-5" />
-            </button>
-          )}
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className={`mx-4 lg:mx-8 mt-4 p-3 lg:p-4 rounded-lg ${
-            error.includes('successfully') 
-              ? 'bg-green-900/30 border border-green-500/50 text-green-200'
-              : 'bg-red-900/30 border border-red-500/50 text-red-200'
-          }`}>
-            <p className="text-sm lg:text-base">{error}</p>
-          </div>
-        )}
-
-        {/* Main Photobooth Content */}
-        <div className="flex-1 flex flex-col lg:flex-row lg:items-center justify-center p-4 lg:p-8 gap-6 lg:gap-12">
-          
-          {/* Photobooth Preview - Portrait Oriented */}
-          <div className="flex flex-col items-center space-y-4 lg:space-y-6">
-            
-            {/* Camera/Photo Container */}
-            <div className="relative bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
-              {photo ? (
-                /* Photo Preview with Glassmorphic Text Input - Portrait */
-                <div className="relative max-w-xs lg:max-w-sm mx-auto">
-                  <div 
-                    className="relative bg-gray-800 rounded-lg overflow-hidden"
-                    style={{ aspectRatio: '9/16' }}
-                  >
-                    <img 
-                      src={photo} 
-                      alt="Captured photo" 
-                      className="w-full h-full object-cover"
-                    />
-                    
-                    {/* Text Overlay on Photo Preview - Lower Third */}
-                    {text.trim() && (
-                      <div className="absolute bottom-[15%] left-4 right-4 pointer-events-none">
-                        <div 
-                          className="text-white font-bold text-center px-3 py-2 bg-black/70 backdrop-blur-sm rounded-lg mx-auto border border-white/20"
-                          style={{ 
-                            fontSize: 'clamp(0.875rem, 3vw, 1.25rem)',
-                            textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
-                            lineHeight: '1.2',
-                            maxWidth: '90%',
-                            wordWrap: 'break-word',
-                            whiteSpace: 'pre-wrap'
-                          }}
-                        >
-                          {text}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Glassmorphic Text Input Overlay - On Photo Preview */}
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <div className="bg-black/30 backdrop-blur-md rounded-xl border border-white/20 p-3 shadow-2xl">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Type className="w-3 h-3 text-white/80" />
-                          <span className="text-xs font-medium text-white/90">Add Text to Photo</span>
-                        </div>
-                        
-                        <textarea
-                          value={text}
-                          onChange={(e) => setText(e.target.value)}
-                          placeholder="Type your message..."
-                          className="w-full h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-xs text-white placeholder-white/60 resize-none focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all leading-tight"
-                          maxLength={80}
-                          rows={2}
-                        />
-                        
-                        <div className="flex justify-between items-center mt-1">
-                          <span className="text-xs text-white/70">
-                            {text.length}/80
-                          </span>
-                          {text && (
-                            <button
-                              onClick={() => setText('')}
-                              className="text-xs text-red-300 hover:text-red-200 transition-colors px-2 py-1 hover:bg-red-500/20 rounded"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Camera View - Portrait Container with Natural Video */
-                <div 
-                  className="relative bg-gray-800 w-80 lg:w-96 mx-auto overflow-hidden rounded-lg" 
-                  style={{ aspectRatio: '9/16' }}
-                >
-                  {/* Video Element - Natural aspect ratio, object-fit contains */}
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-contain bg-gray-800"
-                    style={{ 
-                      transform: 'scaleX(-1)' // Mirror for selfie effect
-                    }}
-                  />
-                  
-                  {/* Camera State Overlay */}
-                  {cameraState !== 'active' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <div className="text-center text-white p-6">
-                        {cameraState === 'starting' && (
-                          <>
-                            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-white mb-4"></div>
-                            <p className="text-base lg:text-lg">Starting camera...</p>
-                          </>
-                        )}
-                        {cameraState === 'error' && (
-                          <>
-                            <Camera className="w-16 h-16 mx-auto mb-4 text-red-400" />
-                            <p className="text-red-200 mb-4 text-base lg:text-lg">Camera unavailable</p>
-                            <button
-                              onClick={() => startCamera(selectedDevice)}
-                              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-                            >
-                              Retry Camera
-                            </button>
-                          </>
-                        )}
-                        {cameraState === 'idle' && (
-                          <>
-                            <Camera className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                            <p className="mb-4 text-base lg:text-lg">Ready to start</p>
-                            <button
-                              onClick={() => startCamera(selectedDevice)}
-                              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
-                            >
-                              Start Camera
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Capture Button */}
-                  {cameraState === 'active' && (
-                    <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
-                      <button
-                        onClick={capturePhoto}
-                        className="w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-full border-4 border-gray-200 hover:border-purple-400 transition-all duration-200 flex items-center justify-center shadow-xl hover:shadow-2xl transform hover:scale-105"
-                      >
-                        <div className="w-12 h-12 lg:w-14 lg:h-14 bg-purple-500 rounded-full"></div>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Hidden Canvas for Photo Processing */}
-              <canvas ref={canvasRef} className="hidden" />
-            </div>
-
-            {/* Photo Action Buttons */}
-            {photo && (
-              <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs lg:max-w-sm">
-                <button
-                  onClick={retakePhoto}
-                  className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors flex items-center justify-center space-x-2 font-medium"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Retake</span>
-                </button>
-                
-                <button
-                  onClick={downloadPhoto}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors flex items-center justify-center space-x-2 font-medium"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download</span>
-                </button>
-                
-                <button
-                  onClick={uploadToCollage}
-                  disabled={uploading}
-                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded-xl transition-colors flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
-                >
-                  {uploading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>Upload</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Side Panel - Camera Settings & Instructions */}
-          <div className="lg:w-80 space-y-4 lg:space-y-6">
-            
-            {/* Camera Settings */}
-            {devices.length > 0 && (
-              <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-4 lg:p-6 border border-gray-700">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Settings className="w-4 h-4 lg:w-5 lg:h-5 text-blue-400" />
-                  <h3 className="text-base lg:text-lg font-semibold text-white">Camera Settings</h3>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Select Camera
-                  </label>
-                  <select
-                    value={selectedDevice}
-                    onChange={(e) => handleDeviceChange(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                  >
-                    {devices.map((device) => (
-                      <option key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* Instructions */}
-            <div className="bg-blue-900/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-4 lg:p-6">
-              <h3 className="text-base lg:text-lg font-semibold text-blue-300 mb-3 flex items-center">
-                <span className="text-2xl mr-2">📸</span>
-                How to Use
-              </h3>
-              <ul className="text-sm text-blue-200 space-y-2">
-                <li className="flex items-start">
-                  <span className="text-blue-400 mr-2 font-bold">1.</span>
-                  Position yourself in the camera view
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-400 mr-2 font-bold">2.</span>
-                  Click the big purple button to take photo
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-400 mr-2 font-bold">3.</span>
-                  Add optional text overlay after taking photo
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-400 mr-2 font-bold">4.</span>
-                  Upload to add it to the collage automatically!
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Layout>
+    <group ref={groupRef} position={position} rotation={rotation}>
+      <mesh>
+        <planeGeometry args={[1.4, 2.1]} />
+        <meshStandardMaterial 
+          map={texture}
+          transparent
+          side={THREE.DoubleSide}
+          metalness={0}
+          roughness={0.2}
+          envMapIntensity={1.0}
+          emissive="#ffffff"
+          emissiveIntensity={0.25}
+          emissiveMap={texture}
+          toneMapped={false}
+        />
+      </mesh>
+      
+      {comment && textTexture && (
+        <mesh position={[0, -1.2, 0.01]}>
+          <planeGeometry args={[1.4, 0.35]} />
+          <meshBasicMaterial 
+            map={textTexture} 
+            transparent 
+            alphaTest={0.1}
+          />
+        </mesh>
+      )}
+    </group>
   );
 };
 
-export default PhotoboothPage;
+// Enhanced Milky Way Particle System with asymmetric clusters
+interface MilkyWayParticleSystemProps {
+  colorTheme: typeof PARTICLE_THEMES[0];
+  photoPositions: Array<{ position: [number, number, number] }>;
+}
+
+const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTheme, photoPositions }) => {
+  const mainCloudRef = useRef<THREE.Points>(null);
+  const dustCloudRef = useRef<THREE.Points>(null);
+  const clustersRef = useRef<THREE.Group>(null);
+  
+  // Fixed particle counts to prevent buffer size mismatches
+  const MAIN_COUNT = 4000;
+  const DUST_COUNT = 2500;
+  const CLUSTER_COUNT = 8;
+  const PARTICLES_PER_CLUSTER = 300;
+  
+  // Create realistic particle distribution with varying colors and sizes
+  const particleData = useMemo(() => {
+    // Main cloud particles (distributed in a galaxy-like spiral)
+    const mainPositions = new Float32Array(MAIN_COUNT * 3);
+    const mainColors = new Float32Array(MAIN_COUNT * 3);
+    const mainSizes = new Float32Array(MAIN_COUNT);
+    const mainVelocities = new Float32Array(MAIN_COUNT * 3);
+    
+    for (let i = 0; i < MAIN_COUNT; i++) {
+      // Create multiple spiral arms like the Milky Way
+      const armIndex = Math.floor(Math.random() * 4); // 4 spiral arms
+      const armAngle = (armIndex * Math.PI / 2) + (Math.random() - 0.5) * 0.5;
+      const distanceFromCenter = Math.pow(Math.random(), 0.5) * 80; // Power distribution for realistic density
+      const spiralTightness = 0.2;
+      const angle = armAngle + (distanceFromCenter * spiralTightness);
+      
+      // Add noise and scatter
+      const noise = (Math.random() - 0.5) * (8 + distanceFromCenter * 0.1);
+      const heightNoise = (Math.random() - 0.5) * (2 + distanceFromCenter * 0.05);
+      
+      mainPositions[i * 3] = Math.cos(angle) * distanceFromCenter + noise;
+      mainPositions[i * 3 + 1] = heightNoise + Math.sin(angle * 0.1) * (distanceFromCenter * 0.02);
+      mainPositions[i * 3 + 2] = Math.sin(angle) * distanceFromCenter + noise;
+      
+      // Very subtle movement for realism
+      mainVelocities[i * 3] = (Math.random() - 0.5) * 0.002;
+      mainVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.001;
+      mainVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.002;
+      
+      // Realistic size distribution - most particles very small, few large
+      const sizeRandom = Math.random();
+      if (sizeRandom < 0.7) {
+        // 70% tiny particles
+        mainSizes[i] = 0.5 + Math.random() * 1.5;
+      } else if (sizeRandom < 0.9) {
+        // 20% small particles
+        mainSizes[i] = 2 + Math.random() * 2;
+      } else {
+        // 10% larger particles (star clusters)
+        mainSizes[i] = 4 + Math.random() * 3;
+      }
+    }
+    
+    // Dust cloud particles (very fine, close to photos)
+    const dustPositions = new Float32Array(DUST_COUNT * 3);
+    const dustColors = new Float32Array(DUST_COUNT * 3);
+    const dustSizes = new Float32Array(DUST_COUNT);
+    const dustVelocities = new Float32Array(DUST_COUNT * 3);
+    
+    for (let i = 0; i < DUST_COUNT; i++) {
+      // Concentrate around photo area with exponential falloff
+      const radius = Math.pow(Math.random(), 2) * 50 + 10;
+      const angle = Math.random() * Math.PI * 2;
+      const height = (Math.random() - 0.5) * 30 + 15;
+      
+      dustPositions[i * 3] = Math.cos(angle) * radius + (Math.random() - 0.5) * 15;
+      dustPositions[i * 3 + 1] = height;
+      dustPositions[i * 3 + 2] = Math.sin(angle) * radius + (Math.random() - 0.5) * 15;
+      
+      dustVelocities[i * 3] = (Math.random() - 0.5) * 0.003;
+      dustVelocities[i * 3 + 1] = Math.random() * 0.002 + 0.001;
+      dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.003;
+      
+      // Very fine dust particles
+      dustSizes[i] = 0.3 + Math.random() * 1.2;
+    }
+    
+    // Create dense star clusters at various distances
+    const clusterData = [];
+    for (let c = 0; c < CLUSTER_COUNT; c++) {
+      const clusterDistance = 30 + Math.random() * 100;
+      const clusterAngle = Math.random() * Math.PI * 2;
+      const clusterHeight = (Math.random() - 0.5) * 60 + 20;
+      
+      const clusterCenter = {
+        x: Math.cos(clusterAngle) * clusterDistance,
+        y: clusterHeight,
+        z: Math.sin(clusterAngle) * clusterDistance
+      };
+      
+      const clusterPositions = new Float32Array(PARTICLES_PER_CLUSTER * 3);
+      const clusterColors = new Float32Array(PARTICLES_PER_CLUSTER * 3);
+      const clusterSizes = new Float32Array(PARTICLES_PER_CLUSTER);
+      const clusterVelocities = new Float32Array(PARTICLES_PER_CLUSTER * 3);
+      
+      for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
+        // Dense spherical distribution
+        const phi = Math.random() * Math.PI * 2;
+        const cosTheta = Math.random() * 2 - 1;
+        const u = Math.random();
+        const clusterRadius = Math.pow(u, 1/3) * (3 + Math.random() * 4); // Cubic root for sphere
+        
+        const theta = Math.acos(cosTheta);
+        const r = clusterRadius;
+        
+        clusterPositions[i * 3] = clusterCenter.x + r * Math.sin(theta) * Math.cos(phi);
+        clusterPositions[i * 3 + 1] = clusterCenter.y + r * Math.cos(theta);
+        clusterPositions[i * 3 + 2] = clusterCenter.z + r * Math.sin(theta) * Math.sin(phi);
+        
+        clusterVelocities[i * 3] = (Math.random() - 0.5) * 0.001;
+        clusterVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.001;
+        clusterVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.001;
+        
+        // Varied sizes within cluster
+        clusterSizes[i] = 0.8 + Math.random() * 2.5;
+      }
+      
+      clusterData.push({
+        positions: clusterPositions,
+        colors: clusterColors,
+        sizes: clusterSizes,
+        velocities: clusterVelocities,
+        center: clusterCenter
+      });
+    }
+    
+    return {
+      main: {
+        positions: mainPositions,
+        colors: mainColors,
+        sizes: mainSizes,
+        velocities: mainVelocities,
+        count: MAIN_COUNT
+      },
+      dust: {
+        positions: dustPositions,
+        colors: dustColors,
+        sizes: dustSizes,
+        velocities: dustVelocities,
+        count: DUST_COUNT
+      },
+      clusters: clusterData
+    };
+  }, []); // Remove dependencies to prevent recreation
+
+  // Update colors when theme changes
+  React.useEffect(() => {
+    if (!mainCloudRef.current || !dustCloudRef.current || !clustersRef.current) return;
+    
+    // Update main cloud colors
+    const mainColors = mainCloudRef.current.geometry.attributes.color.array as Float32Array;
+    for (let i = 0; i < particleData.main.count; i++) {
+      const baseColor = new THREE.Color(colorTheme.primary);
+      const hsl = { h: 0, s: 0, l: 0 };
+      baseColor.getHSL(hsl);
+      
+      const hueVariation = (Math.random() - 0.5) * 0.1;
+      const saturationVariation = 0.8 + Math.random() * 0.4;
+      const lightnessVariation = 0.3 + Math.random() * 0.7;
+      
+      const particleColor = new THREE.Color();
+      particleColor.setHSL(
+        (hsl.h + hueVariation + 1) % 1,
+        Math.min(1, hsl.s * saturationVariation),
+        Math.min(1, hsl.l * lightnessVariation)
+      );
+      
+      mainColors[i * 3] = particleColor.r;
+      mainColors[i * 3 + 1] = particleColor.g;
+      mainColors[i * 3 + 2] = particleColor.b;
+    }
+    mainCloudRef.current.geometry.attributes.color.needsUpdate = true;
+    
+    // Update dust cloud colors
+    const dustColors = dustCloudRef.current.geometry.attributes.color.array as Float32Array;
+    for (let i = 0; i < particleData.dust.count; i++) {
+      const baseColor = new THREE.Color(colorTheme.secondary);
+      const hsl = { h: 0, s: 0, l: 0 };
+      baseColor.getHSL(hsl);
+      
+      const particleColor = new THREE.Color();
+      particleColor.setHSL(
+        (hsl.h + (Math.random() - 0.5) * 0.15 + 1) % 1,
+        Math.min(1, hsl.s * (0.5 + Math.random() * 0.5)),
+        Math.min(1, hsl.l * (0.4 + Math.random() * 0.6))
+      );
+      
+      dustColors[i * 3] = particleColor.r;
+      dustColors[i * 3 + 1] = particleColor.g;
+      dustColors[i * 3 + 2] = particleColor.b;
+    }
+    dustCloudRef.current.geometry.attributes.color.needsUpdate = true;
+    
+    // Update cluster colors
+    clustersRef.current.children.forEach((cluster, clusterIndex) => {
+      if (cluster instanceof THREE.Points && clusterIndex < particleData.clusters.length) {
+        const clusterColors = cluster.geometry.attributes.color.array as Float32Array;
+        const clusterColorBase = [colorTheme.primary, colorTheme.secondary, colorTheme.accent][clusterIndex % 3];
+        
+        for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
+          const baseColor = new THREE.Color(clusterColorBase);
+          const hsl = { h: 0, s: 0, l: 0 };
+          baseColor.getHSL(hsl);
+          
+          const particleColor = new THREE.Color();
+          particleColor.setHSL(
+            (hsl.h + (Math.random() - 0.5) * 0.08 + 1) % 1,
+            Math.min(1, hsl.s * (0.7 + Math.random() * 0.6)),
+            Math.min(1, hsl.l * (0.5 + Math.random() * 0.5))
+          );
+          
+          clusterColors[i * 3] = particleColor.r;
+          clusterColors[i * 3 + 1] = particleColor.g;
+          clusterColors[i * 3 + 2] = particleColor.b;
+        }
+        cluster.geometry.attributes.color.needsUpdate = true;
+      }
+    });
+  }, [colorTheme, particleData]);
+
+  // Advanced animation system with realistic stellar motion
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+    
+    // Animate main cloud with galactic rotation
+    if (mainCloudRef.current) {
+      const mainPositions = mainCloudRef.current.geometry.attributes.position.array as Float32Array;
+      
+      for (let i = 0; i < particleData.main.count; i++) {
+        const i3 = i * 3;
+        
+        // Apply stellar velocities
+        mainPositions[i3] += particleData.main.velocities[i3];
+        mainPositions[i3 + 1] += particleData.main.velocities[i3 + 1];
+        mainPositions[i3 + 2] += particleData.main.velocities[i3 + 2];
+        
+        // Add complex galactic motion patterns
+        const x = mainPositions[i3];
+        const z = mainPositions[i3 + 2];
+        const distanceFromCenter = Math.sqrt(x * x + z * z);
+        
+        // Galactic rotation - closer stars orbit faster (like real galaxies)
+        const orbitalSpeed = distanceFromCenter > 0 ? 0.00008 / Math.sqrt(distanceFromCenter + 10) : 0;
+        const angle = Math.atan2(z, x);
+        const newAngle = angle + orbitalSpeed;
+        
+        // Apply subtle orbital motion
+        mainPositions[i3] += Math.cos(newAngle) * orbitalSpeed * 0.1;
+        mainPositions[i3 + 2] += Math.sin(newAngle) * orbitalSpeed * 0.1;
+        
+        // Add stellar parallax and depth motion
+        const parallaxFreq = time * 0.02 + i * 0.001;
+        mainPositions[i3] += Math.sin(parallaxFreq) * 0.001;
+        mainPositions[i3 + 1] += Math.cos(parallaxFreq * 0

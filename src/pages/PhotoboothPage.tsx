@@ -557,6 +557,23 @@ const PhotoboothPage: React.FC = () => {
     );
   }
 
+  // Ensure we have a currentCollage before rendering the main UI
+  if (!currentCollage) {
+    return (
+      <Layout>
+        <div className="min-h-[calc(100vh-160px)] flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-4"></div>
+            <p className="text-white">Loading photobooth...</p>
+            <p className="text-gray-400 text-sm mt-2">
+              Looking for collage: {normalizedCode}
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -564,7 +581,7 @@ const PhotoboothPage: React.FC = () => {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigate(`/collage/${currentCollage.code}`)}
+              onClick={() => navigate(`/collage/${currentCollage?.code || ''}`)}
               className="text-gray-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-6 h-6" />
@@ -574,7 +591,7 @@ const PhotoboothPage: React.FC = () => {
                 <Camera className="w-6 h-6 text-purple-500" />
                 <span>Photobooth</span>
               </h1>
-              <p className="text-gray-400">{currentCollage.name} • Code: {currentCollage.code}</p>
+              <p className="text-gray-400">{currentCollage?.name} • Code: {currentCollage?.code}</p>
             </div>
           </div>
           

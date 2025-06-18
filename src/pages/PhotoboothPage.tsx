@@ -29,7 +29,10 @@ const PhotoboothPage: React.FC = () => {
   const [cameraState, setCameraState] = useState<CameraState>('idle');
   
   const [showError, setShowError] = useState(false);
-  const { currentCollage, fetchCollageByCode, uploadPhoto, setupRealtimeSubscription, cleanupRealtimeSubscription, loading, error: storeError } = useCollageStore();
+  const { currentCollage, fetchCollageByCode, uploadPhoto, setupRealtimeSubscription, cleanupRealtimeSubscription, loading, error: storeError, photos } = useCollageStore();
+
+  // SAFETY: Ensure photos is always an array
+  const safePhotos = Array.isArray(photos) ? photos : [];
 
   // FIXED: Normalize code to uppercase for consistent database lookup
   const normalizedCode = code?.toUpperCase();
@@ -619,10 +622,10 @@ const PhotoboothPage: React.FC = () => {
         )}
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Camera/Photo View */}
-          <div className="lg:col-span-2">
-            <div className="bg-gray-900 rounded-lg overflow-hidden">
+          <div className="flex-1 flex justify-center">
+            <div className="bg-gray-900 rounded-lg overflow-hidden w-full max-w-md">
               {photo ? (
                 /* Photo Preview */
                 <div className="relative">
@@ -670,8 +673,8 @@ const PhotoboothPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                /* Camera View */
-                <div className="relative aspect-video lg:aspect-video md:aspect-[3/4] sm:aspect-[3/4] aspect-[3/4] bg-gray-800">
+                /* Camera View - Vertical on all devices */
+                <div className="relative aspect-[3/4] bg-gray-800">
                   {/* Video Element */}
                   <video
                     ref={videoRef}
@@ -719,8 +722,8 @@ const PhotoboothPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Text Overlay Input - Mobile */}
-                  <div className="absolute top-4 left-4 right-4 lg:hidden">
+                  {/* Text Overlay Input - All devices */}
+                  <div className="absolute top-4 left-4 right-4">
                     <textarea
                       value={text}
                       onChange={(e) => setText(e.target.value)}
@@ -777,40 +780,10 @@ const PhotoboothPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Controls Panel - Desktop Only */}
-          <div className="space-y-6 hidden lg:block">
-            {/* Text Overlay - Desktop */}
-            <div className="bg-gray-900 rounded-lg p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <Type className="w-5 h-5 text-purple-400" />
-                <h3 className="text-lg font-semibold text-white">Add Text</h3>
-              </div>
-              
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Add text to your photo..."
-                className="w-full h-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-400 resize-none focus:outline-none focus:border-purple-500"
-                maxLength={100}
-              />
-              
-              <div className="flex justify-between items-center mt-2">
-                <span className="text-xs text-gray-400">
-                  {text.length}/100 characters
-                </span>
-                {text && (
-                  <button
-                    onClick={() => setText('')}
-                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-
+          {/* Controls Panel - Desktop Side Panel */}
+          <div className="w-full lg:w-80 space-y-6">
             {/* Camera Settings */}
-            {devices.length > 0 && (
+            {devices.length > 1 && (
               <div className="bg-gray-900 rounded-lg p-6">
                 <div className="flex items-center space-x-2 mb-4">
                   <Settings className="w-5 h-5 text-purple-400" />
@@ -841,44 +814,43 @@ const PhotoboothPage: React.FC = () => {
               <h3 className="text-lg font-semibold text-white mb-4">How to use</h3>
               <div className="space-y-2 text-sm text-gray-300">
                 <p>1. Allow camera access when prompted</p>
-                <p>2. Add optional text overlay</p>
+                <p>2. Add text in the field above the camera</p>
                 <p>3. Click the white button to take a photo</p>
                 <p>4. Review and upload to the collage</p>
               </div>
             </div>
-          </div>
 
-          {/* Mobile Camera Controls */}
-          <div className="lg:hidden space-y-4">
-            {/* Camera Settings - Mobile */}
-            {devices.length > 1 && (
-              <div className="bg-gray-900 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-white font-medium">Camera:</span>
-                  <select
-                    value={selectedDevice}
-                    onChange={(e) => handleDeviceChange(e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-white text-sm focus:outline-none focus:border-purple-500"
-                  >
-                    {devices.map((device, index) => (
-                      <option key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Camera ${index + 1}`}
-                      </option>
-                    ))}
-                  </select>
+            {/* Upload Tips */}
+            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-purple-300 mb-3">Tips</h3>
+              <div className="space-y-2 text-sm text-purple-200">
+                <p>• Hold your device steady for clearer photos</p>
+                <p>• Make sure you have good lighting</p>
+                <p>• Text will appear centered on your photo</p>
+                <p>• Photos appear in the collage automatically</p>
+              </div>
+            </div>
+
+            {/* Collage Info */}
+            {currentCollage && (
+              <div className="bg-gray-900 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Collage Info</h3>
+                <div className="space-y-2 text-sm text-gray-300">
+                  <div className="flex justify-between">
+                    <span>Name:</span>
+                    <span className="text-white">{currentCollage.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Code:</span>
+                    <span className="text-white font-mono">{currentCollage.code}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Photos:</span>
+                    <span className="text-white">{safePhotos.length}</span>
+                  </div>
                 </div>
               </div>
             )}
-
-            {/* Instructions - Mobile */}
-            <div className="bg-gray-900 rounded-lg p-4">
-              <h3 className="text-white font-semibold mb-2">Quick Guide</h3>
-              <div className="text-sm text-gray-300 space-y-1">
-                <p>• Add text in the field above the camera</p>
-                <p>• Tap the white button to take a photo</p>
-                <p>• Upload to add it to the collage</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

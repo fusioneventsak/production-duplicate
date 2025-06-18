@@ -1,7 +1,76 @@
-// src/store/collageStore.ts - CLEAN VERSION (NO JSX/REACT COMPONENTS)
+// src/store/collageStore.ts - CORRECTED VERSION (NO JSX)
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { nanoid } from 'nanoid';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+
+// Helper function for deep merging objects
+function deepMerge(target: any, source: any): any {
+  const result = { ...target };
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      result[key] = deepMerge(target[key] || {}, source[key]);
+    } else {
+      result[key] = source[key];
+    }
+  }
+  return result;
+}
+
+// Default settings
+const defaultSettings = {
+  animationPattern: 'grid',
+  animationSpeed: 50,
+  animationEnabled: true,
+  photoCount: 50,
+  backgroundColor: '#000000',
+  backgroundGradient: false,
+  backgroundGradientStart: '#000000',
+  backgroundGradientEnd: '#1a1a1a',
+  backgroundGradientAngle: 180,
+  emptySlotColor: '#1A1A1A',
+  cameraDistance: 25,
+  cameraRotationEnabled: true,
+  cameraRotationSpeed: 0.2,
+  cameraHeight: 10,
+  cameraEnabled: true,
+  spotlightCount: 4,
+  spotlightHeight: 30,
+  spotlightDistance: 40,
+  spotlightAngle: Math.PI / 6,
+  spotlightIntensity: 2,
+  spotlightColor: '#ffffff',
+  ambientLightIntensity: 0.4,
+  ambientLightColor: '#404040',
+  floorEnabled: true,
+  floorSize: 200,
+  floorColor: '#1A1A1A',
+  floorOpacity: 1,
+  floorMetalness: 0.5,
+  floorRoughness: 0.5,
+  gridEnabled: false,
+  gridSize: 100,
+  gridDivisions: 20,
+  gridColor: '#404040',
+  gridOpacity: 0.5,
+  photoSize: 4.0,
+  photoBrightness: 1.0,
+  photoSpacing: 1.2,
+  photoRotation: 0,
+  photoTilt: 0,
+  photoDepth: 0.1,
+  shadowsEnabled: true,
+  shadowQuality: 'medium' as const,
+  fogEnabled: false,
+  fogColor: '#000000',
+  fogNear: 50,
+  fogFar: 200,
+  postProcessingEnabled: false,
+  bloomEnabled: false,
+  bloomStrength: 0.5,
+  bloomRadius: 0.4,
+  bloomThreshold: 0.9,
+};
 
 // Types
 export interface Photo {
@@ -17,9 +86,9 @@ export interface Collage {
   id: string;
   name: string;
   code: string;
-  user_id: string;
+  user_id?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   settings?: SceneSettings;
 }
 
@@ -92,78 +161,118 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
   lastRefreshTime: Date.now(),
   pollingInterval: null,
 
-  // Fetch all collages for the current user
-  fetchCollages: async () => {
-    set({ loading: true, error: null });
+  // Fetch photos for a collage
+  fetchPhotosByCollageId: async (collageId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
+      console.log('📸 Fetching photos for collage:', collageId);
+      
       const { data, error } = await supabase
-        .from('collages')
+        .from('photos')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('collage_id', collageId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      set({ collages: data || [], loading: false });
+      
+      console.log('📸 Fetched photos:', data?.length || 0);
+      set({ 
+        photos: data as Photo[], 
+        lastRefreshTime: Date.now() 
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Fetch photos error:', error);
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  // Fetch all collages (no user filter for now)
+  fetchCollages: async () => {
+    set({ loading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('collages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      set({ collages: data as Collage[], loading: false });
     } catch (error: any) {
       set({ error: error.message, loading: false });
     }
   },
 
-  // Fetch collage by code (for public viewing)
+  // Fetch collage by code with settings
   fetchCollageByCode: async (code: string) => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await supabase
+      const { data: collage, error: collageError } = await supabase
         .from('collages')
         .select('*')
-        .eq('code', code.toUpperCase())
+        .eq('code', code)
         .single();
 
-      if (error) throw error;
+      if (collageError) throw collageError;
+
+      // Try to fetch settings from separate table
+      const { data: settings } = await supabase
+        .from('collage_settings')
+        .select('settings')
+        .eq('collage_id', collage.id)
+        .single();
+
+      const collageWithSettings = {
+        ...collage,
+        settings: settings?.settings ? deepMerge(defaultSettings, settings.settings) : defaultSettings
+      } as Collage;
+
+      set({ currentCollage: collageWithSettings, loading: false });
       
-      set({ 
-        currentCollage: data, 
-        loading: false,
-        lastRefreshTime: Date.now()
-      });
+      // Fetch photos and setup subscription
+      await get().fetchPhotosByCollageId(collage.id);
+      get().setupRealtimeSubscription(collage.id);
       
-      // Fetch photos for this collage
-      await get().fetchPhotosByCollageId(data.id);
-      
-      return data;
+      return collageWithSettings;
     } catch (error: any) {
-      set({ error: error.message, loading: false, currentCollage: null });
+      set({ error: error.message, loading: false });
       return null;
     }
   },
 
-  // Fetch collage by ID (for editing)
+  // Fetch collage by ID with settings
   fetchCollageById: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await supabase
+      const { data: collage, error: collageError } = await supabase
         .from('collages')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (collageError) throw collageError;
+
+      // Try to fetch settings from separate table
+      const { data: settings } = await supabase
+        .from('collage_settings')
+        .select('settings')
+        .eq('collage_id', id)
+        .single();
+
+      const collageWithSettings = {
+        ...collage,
+        settings: settings?.settings ? deepMerge(defaultSettings, settings.settings) : defaultSettings
+      } as Collage;
+
+      set({ currentCollage: collageWithSettings, loading: false });
       
-      set({ 
-        currentCollage: data, 
-        loading: false,
-        lastRefreshTime: Date.now()
-      });
+      // Fetch photos and setup subscription
+      await get().fetchPhotosByCollageId(id);
+      get().setupRealtimeSubscription(id);
       
-      // Fetch photos for this collage
-      await get().fetchPhotosByCollageId(data.id);
-      
-      return data;
+      return collageWithSettings;
     } catch (error: any) {
-      set({ error: error.message, loading: false, currentCollage: null });
+      set({ error: error.message, loading: false });
       return null;
     }
   },
@@ -172,36 +281,39 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
   createCollage: async (name: string) => {
     set({ loading: true, error: null });
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Generate unique code
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-      const { data, error } = await supabase
+      const code = nanoid(8).toUpperCase();
+      
+      const { data: collage, error: collageError } = await supabase
         .from('collages')
-        .insert({
-          name,
-          code,
-          user_id: user.id,
-          settings: {
-            animationPattern: 'grid',
-            photoCount: 50,
-            animationSpeed: 50,
-            backgroundColor: '#000000'
-          }
-        })
+        .insert([{ name, code }])
         .select()
         .single();
 
-      if (error) throw error;
-      
-      set({ currentCollage: data, loading: false });
-      
-      // Refresh collages list
-      await get().fetchCollages();
-      
-      return data;
+      if (collageError) throw collageError;
+
+      // Create settings in separate table
+      const { data: settings, error: settingsError } = await supabase
+        .from('collage_settings')
+        .insert([{ 
+          collage_id: collage.id, 
+          settings: defaultSettings 
+        }])
+        .select()
+        .single();
+
+      if (settingsError) throw settingsError;
+
+      const collageWithSettings = {
+        ...collage,
+        settings: defaultSettings
+      } as Collage;
+
+      set((state) => ({
+        collages: [collageWithSettings, ...state.collages],
+        loading: false
+      }));
+
+      return collageWithSettings;
     } catch (error: any) {
       set({ error: error.message, loading: false });
       return null;
@@ -211,48 +323,68 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
   // Update collage settings
   updateCollageSettings: async (collageId: string, settings: Partial<SceneSettings>) => {
     try {
+      const currentCollage = get().currentCollage;
+      if (!currentCollage) throw new Error('No current collage');
+
+      const mergedSettings = deepMerge(currentCollage.settings, settings);
+
       const { data, error } = await supabase
-        .from('collages')
-        .update({ 
-          settings,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', collageId)
+        .from('collage_settings')
+        .update({ settings: mergedSettings })
+        .eq('collage_id', collageId)
         .select()
         .single();
 
       if (error) throw error;
-      
-      set({ currentCollage: data });
+
+      set((state) => ({
+        currentCollage: state.currentCollage ? {
+          ...state.currentCollage,
+          settings: mergedSettings
+        } : null
+      }));
+
       return data;
     } catch (error: any) {
-      console.error('Failed to update settings:', error);
+      console.error('Failed to update collage settings:', error.message);
       throw error;
     }
   },
 
-  // Upload photo
+  // Enhanced upload with better error handling
   uploadPhoto: async (collageId: string, file: File) => {
     try {
+      console.log('📤 Starting photo upload:', file.name);
+      
+      // Validation
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error('File size exceeds 10MB limit');
+      }
+
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validImageTypes.includes(file.type)) {
+        throw new Error('Invalid file type. Only images are supported.');
+      }
+
       // Generate unique filename
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `collages/${collageId}/${fileName}`;
+      const fileName = `${collageId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('photos')
-        .upload(filePath, file);
+        .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('photos')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
       // Save to database
-      const { data, error } = await supabase
+      const { data: photoData, error: dbError } = await supabase
         .from('photos')
         .insert({
           collage_id: collageId,
@@ -261,14 +393,18 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (dbError) throw dbError;
+
+      console.log('✅ Photo uploaded successfully:', photoData);
       
-      // Add to state
-      get().addPhotoToState(data);
-      
-      return data;
+      // Add to state if realtime isn't working
+      if (!get().isRealtimeConnected) {
+        get().addPhotoToState(photoData);
+      }
+
+      return photoData;
     } catch (error: any) {
-      console.error('Upload failed:', error);
+      console.error('❌ Upload error:', error);
       throw error;
     }
   },
@@ -283,32 +419,13 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
 
       if (error) throw error;
       
-      // Remove from state
-      get().removePhotoFromState(photoId);
+      // Remove from state if realtime isn't working
+      if (!get().isRealtimeConnected) {
+        get().removePhotoFromState(photoId);
+      }
     } catch (error: any) {
       console.error('Delete failed:', error);
       throw error;
-    }
-  },
-
-  // Fetch photos for a collage
-  fetchPhotosByCollageId: async (collageId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('photos')
-        .select('*')
-        .eq('collage_id', collageId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      set({ 
-        photos: data || [],
-        lastRefreshTime: Date.now()
-      });
-    } catch (error: any) {
-      console.error('Failed to fetch photos:', error);
-      set({ error: error.message });
     }
   },
 

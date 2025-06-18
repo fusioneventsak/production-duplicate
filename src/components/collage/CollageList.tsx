@@ -3,8 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Suspense } from 'react';
 import * as THREE from 'three';
-import { Palette, Image, Edit, ExternalLink, Pencil, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Palette } from 'lucide-react';
 
 // Mobile detection hook
 const useIsMobile = () => {
@@ -484,4 +483,807 @@ const MilkyWayParticleSystem: React.FC<MilkyWayParticleSystemProps> = ({ colorTh
         
         // Add stellar parallax and depth motion
         const parallaxFreq = time * 0.02 + i * 0.001;
-        mainPositions[i3] += Math.sin(parallaxFreq)
+        mainPositions[i3] += Math.sin(parallaxFreq) * 0.001;
+        mainPositions[i3 + 1] += Math.cos(parallaxFreq * 0.7) * 0.0005;
+        mainPositions[i3 + 2] += Math.sin(parallaxFreq * 1.3) * 0.001;
+      }
+      
+      mainCloudRef.current.geometry.attributes.position.needsUpdate = true;
+      
+      // Galactic rotation - very slow
+      mainCloudRef.current.rotation.y = time * 0.003;
+    }
+    
+    // Animate dust cloud with atmospheric turbulence
+    if (dustCloudRef.current) {
+      const dustPositions = dustCloudRef.current.geometry.attributes.position.array as Float32Array;
+      
+      for (let i = 0; i < particleData.dust.count; i++) {
+        const i3 = i * 3;
+        
+        // Apply dust velocities
+        dustPositions[i3] += particleData.dust.velocities[i3];
+        dustPositions[i3 + 1] += particleData.dust.velocities[i3 + 1];
+        dustPositions[i3 + 2] += particleData.dust.velocities[i3 + 2];
+        
+        // Add atmospheric turbulence
+        const turbulenceFreq = time * 0.1 + i * 0.05;
+        dustPositions[i3] += Math.sin(turbulenceFreq) * 0.002;
+        dustPositions[i3 + 1] += Math.cos(turbulenceFreq * 1.3) * 0.001;
+        dustPositions[i3 + 2] += Math.sin(turbulenceFreq * 0.8) * 0.002;
+        
+        // Reset dust particles that drift too far (cosmic recycling)
+        if (dustPositions[i3 + 1] > 60) {
+          dustPositions[i3 + 1] = -10;
+          dustPositions[i3] = (Math.random() - 0.5) * 70;
+          dustPositions[i3 + 2] = (Math.random() - 0.5) * 70;
+        }
+        
+        // Boundary wrapping for infinite effect
+        if (Math.abs(dustPositions[i3]) > 80) {
+          dustPositions[i3] = -Math.sign(dustPositions[i3]) * 20;
+        }
+        if (Math.abs(dustPositions[i3 + 2]) > 80) {
+          dustPositions[i3 + 2] = -Math.sign(dustPositions[i3 + 2]) * 20;
+        }
+      }
+      
+      dustCloudRef.current.geometry.attributes.position.needsUpdate = true;
+      dustCloudRef.current.rotation.y = time * 0.005;
+    }
+    
+    // Animate clusters with gravitational dynamics
+    if (clustersRef.current) {
+      clustersRef.current.children.forEach((cluster, clusterIndex) => {
+        if (cluster instanceof THREE.Points && clusterIndex < particleData.clusters.length) {
+          const positions = cluster.geometry.attributes.position.array as Float32Array;
+          const velocities = particleData.clusters[clusterIndex].velocities;
+          const expectedLength = PARTICLES_PER_CLUSTER * 3;
+          const clusterCenter = particleData.clusters[clusterIndex].center;
+          
+          // Safety check to prevent buffer size mismatch
+          if (positions.length === expectedLength && velocities.length === expectedLength) {
+            for (let i = 0; i < PARTICLES_PER_CLUSTER; i++) {
+              const i3 = i * 3;
+              
+              // Apply cluster particle velocities
+              positions[i3] += velocities[i3];
+              positions[i3 + 1] += velocities[i3 + 1];
+              positions[i3 + 2] += velocities[i3 + 2];
+              
+              // Gravitational attraction to cluster center (weak)
+              const dx = clusterCenter.x - positions[i3];
+              const dy = clusterCenter.y - positions[i3 + 1];
+              const dz = clusterCenter.z - positions[i3 + 2];
+              const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+              
+              if (distance > 0) {
+                const gravitationalForce = 0.00001;
+                positions[i3] += (dx / distance) * gravitationalForce;
+                positions[i3 + 1] += (dy / distance) * gravitationalForce;
+                positions[i3 + 2] += (dz / distance) * gravitationalForce;
+              }
+              
+              // Add cluster internal motion
+              const clusterWave = time * 0.03 + clusterIndex + i * 0.1;
+              positions[i3] += Math.sin(clusterWave) * 0.0005;
+              positions[i3 + 1] += Math.cos(clusterWave * 0.8) * 0.0003;
+              positions[i3 + 2] += Math.sin(clusterWave * 1.2) * 0.0005;
+            }
+            
+            cluster.geometry.attributes.position.needsUpdate = true;
+            
+            // Cluster rotation
+            cluster.rotation.x = time * 0.001 * (clusterIndex % 2 ? 1 : -1);
+            cluster.rotation.z = time * 0.0015 * (clusterIndex % 3 ? 1 : -1);
+          }
+        }
+      });
+    }
+  });
+
+  return (
+    <group>
+      {/* Main Milky Way Cloud - Core stellar population with varying colors */}
+      <points ref={mainCloudRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            array={particleData.main.positions}
+            count={particleData.main.count}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            array={particleData.main.colors}
+            count={particleData.main.count}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-size"
+            array={particleData.main.sizes}
+            count={particleData.main.count}
+            itemSize={1}
+          />
+        </bufferGeometry>
+        <shaderMaterial
+          transparent
+          vertexColors
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          vertexShader={`
+            attribute float size;
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+              vColor = color;
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              gl_PointSize = size * (300.0 / -mvPosition.z);
+              gl_Position = projectionMatrix * mvPosition;
+              
+              // Distance-based opacity
+              float distance = length(mvPosition.xyz);
+              vOpacity = 1.0 - smoothstep(50.0, 200.0, distance);
+            }
+          `}
+          fragmentShader={`
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+              float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+              if (distanceToCenter > 0.5) discard;
+              
+              // Smooth circular falloff
+              float alpha = 1.0 - (distanceToCenter * 2.0);
+              alpha = smoothstep(0.0, 1.0, alpha);
+              
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.8);
+            }
+          `}
+        />
+      </points>
+      
+      {/* Cosmic dust and gas clouds with color variation */}
+      <points ref={dustCloudRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            array={particleData.dust.positions}
+            count={particleData.dust.count}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            array={particleData.dust.colors}
+            count={particleData.dust.count}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-size"
+            array={particleData.dust.sizes}
+            count={particleData.dust.count}
+            itemSize={1}
+          />
+        </bufferGeometry>
+        <shaderMaterial
+          transparent
+          vertexColors
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          vertexShader={`
+            attribute float size;
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+              vColor = color;
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+              gl_PointSize = size * (200.0 / -mvPosition.z);
+              gl_Position = projectionMatrix * mvPosition;
+              
+              // Distance-based opacity for dust
+              float distance = length(mvPosition.xyz);
+              vOpacity = 1.0 - smoothstep(30.0, 100.0, distance);
+            }
+          `}
+          fragmentShader={`
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+              float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+              if (distanceToCenter > 0.5) discard;
+              
+              // Softer falloff for dust
+              float alpha = 1.0 - (distanceToCenter * 2.0);
+              alpha = smoothstep(0.0, 1.0, alpha);
+              
+              gl_FragColor = vec4(vColor, alpha * vOpacity * 0.6);
+            }
+          `}
+        />
+      </points>
+      
+      {/* Star clusters and satellite galaxies with themed colors */}
+      <group ref={clustersRef}>
+        {particleData.clusters.map((cluster, index) => (
+          <points key={index}>
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                array={cluster.positions}
+                count={PARTICLES_PER_CLUSTER}
+                itemSize={3}
+              />
+              <bufferAttribute
+                attach="attributes-color"
+                array={cluster.colors}
+                count={PARTICLES_PER_CLUSTER}
+                itemSize={3}
+              />
+              <bufferAttribute
+                attach="attributes-size"
+                array={cluster.sizes}
+                count={PARTICLES_PER_CLUSTER}
+                itemSize={1}
+              />
+            </bufferGeometry>
+            <shaderMaterial
+              transparent
+              vertexColors
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              vertexShader={`
+                attribute float size;
+                varying vec3 vColor;
+                varying float vOpacity;
+                void main() {
+                  vColor = color;
+                  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                  gl_PointSize = size * (250.0 / -mvPosition.z);
+                  gl_Position = projectionMatrix * mvPosition;
+                  
+                  // Cluster opacity based on distance
+                  float distance = length(mvPosition.xyz);
+                  vOpacity = 1.0 - smoothstep(80.0, 300.0, distance);
+                }
+              `}
+              fragmentShader={`
+                varying vec3 vColor;
+                varying float vOpacity;
+                void main() {
+                  float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+                  if (distanceToCenter > 0.5) discard;
+                  
+                  // Bright core for cluster particles
+                  float alpha = 1.0 - (distanceToCenter * 2.0);
+                  alpha = smoothstep(0.0, 1.0, alpha);
+                  
+                  gl_FragColor = vec4(vColor, alpha * vOpacity * 0.9);
+                }
+              `}
+            />
+          </points>
+        ))}
+      </group>
+    </group>
+  );
+};
+
+// Solid reflective floor component beneath the grid
+const ReflectiveFloor: React.FC = () => {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -3.05, 0]}>
+      <planeGeometry args={[35, 35]} />
+      <meshStandardMaterial 
+        color="#0f0f23"
+        metalness={0.9}
+        roughness={0.1}
+        envMapIntensity={1.0}
+      />
+    </mesh>
+  );
+};
+
+// Floor component with reflective material - same size as grid
+const Floor: React.FC = () => {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -3, 0]}>
+      <planeGeometry args={[35, 35]} />
+      <meshStandardMaterial 
+        color="#1a1a2e"
+        metalness={0.8}
+        roughness={0.2}
+        envMapIntensity={0.9}
+        transparent
+        opacity={0.8}
+      />
+    </mesh>
+  );
+};
+
+// Grid component - matches color theme for cohesive look
+const Grid: React.FC<{ colorTheme: typeof PARTICLE_THEMES[0] }> = ({ colorTheme }) => {
+  const gridRef = useRef<THREE.Group>(null);
+  
+  React.useEffect(() => {
+    if (!gridRef.current) return;
+    
+    // Clear existing grid
+    while (gridRef.current.children.length > 0) {
+      gridRef.current.remove(gridRef.current.children[0]);
+    }
+    
+    // Create new grid with theme colors
+    const helper = new THREE.GridHelper(35, 35, colorTheme.primary, colorTheme.secondary);
+    helper.position.y = -2.99;
+    
+    const material = helper.material as THREE.LineBasicMaterial;
+    material.transparent = true;
+    material.opacity = 0.6;
+    
+    gridRef.current.add(helper);
+  }, [colorTheme]);
+
+  return <group ref={gridRef} />;
+};
+
+// Background gradient component - blacker top, royal purple
+const GradientBackground: React.FC = () => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  const gradientMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        colorTop: { value: new THREE.Color('#000000') },
+        colorMid: { value: new THREE.Color('#4c1d95') },
+        colorBottom: { value: new THREE.Color('#000000') },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 colorTop;
+        uniform vec3 colorMid;
+        uniform vec3 colorBottom;
+        varying vec2 vUv;
+        void main() {
+          vec3 color;
+          if (vUv.y > 0.6) {
+            color = colorTop;
+          } else if (vUv.y > 0.3) {
+            float factor = (vUv.y - 0.3) / 0.3;
+            color = mix(colorMid, colorTop, factor);
+          } else {
+            float factor = vUv.y / 0.3;
+            color = mix(colorBottom, colorMid, factor);
+          }
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+      side: THREE.BackSide,
+    });
+  }, []);
+
+  return (
+    <mesh ref={meshRef} material={gradientMaterial}>
+      <sphereGeometry args={[50, 32, 32]} />
+    </mesh>
+  );
+};
+
+// FIXED: Smart camera controls - ALWAYS INTERACTIVE on all devices
+const SmartCameraControls: React.FC = () => {
+  const controlsRef = useRef<any>();
+  const { camera } = useThree();
+  const isUserInteracting = useRef(false);
+  const lastInteractionTime = useRef(0);
+  const rotationAngle = useRef(0);
+  const baseRadius = useRef(15);
+  const isMobile = useIsMobile();
+  const [isReady, setIsReady] = React.useState(false);
+
+  // Wait for camera to be properly initialized
+  React.useEffect(() => {
+    if (camera && camera.position) {
+      setIsReady(true);
+    }
+  }, [camera]);
+
+  useFrame((state) => {
+    if (!camera || !camera.position) return;
+    
+    const currentTime = Date.now();
+    const timeSinceInteraction = currentTime - lastInteractionTime.current;
+    
+    // Always rotate, but pause during active interaction
+    const shouldAutoRotate = !isUserInteracting.current || timeSinceInteraction > 1000;
+    
+    // FIXED: Remove mobile special case - same logic for all devices
+    if (shouldAutoRotate) {
+      // Continuous rotation around the scene - slower speed
+      rotationAngle.current += 0.002;
+      
+      // Calculate camera position in a circle around the scene - lower height
+      const radius = baseRadius.current;
+      const height = 3 + Math.sin(rotationAngle.current * 0.5) * 0.8; // Lower and less dramatic height variation
+      
+      camera.position.x = Math.cos(rotationAngle.current) * radius;
+      camera.position.y = height;
+      camera.position.z = Math.sin(rotationAngle.current) * radius;
+      
+      // Always look at the center of the scene
+      camera.lookAt(0, 0, 0);
+    }
+    
+    // FIXED: Update controls for all devices
+    if (controlsRef.current) {
+      controlsRef.current.update();
+    }
+  });
+
+  React.useEffect(() => {
+    // FIXED: Remove mobile restriction - allow controls on all devices
+    if (!controlsRef.current) return;
+
+    const controls = controlsRef.current;
+    
+    const handleStart = () => {
+      isUserInteracting.current = true;
+      lastInteractionTime.current = Date.now();
+    };
+
+    const handleEnd = () => {
+      isUserInteracting.current = false;
+      lastInteractionTime.current = Date.now();
+      
+      // Update rotation angle and radius based on where user left the camera
+      if (camera && camera.position) {
+        const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
+        baseRadius.current = Math.max(8, Math.min(25, distance)); // Clamp radius
+        
+        // Calculate the current angle
+        rotationAngle.current = Math.atan2(camera.position.z, camera.position.x);
+      }
+    };
+
+    const handleChange = () => {
+      if (isUserInteracting.current) {
+        lastInteractionTime.current = Date.now();
+      }
+    };
+
+    controls.addEventListener('start', handleStart);
+    controls.addEventListener('end', handleEnd);
+    controls.addEventListener('change', handleChange);
+
+    return () => {
+      controls.removeEventListener('start', handleStart);
+      controls.removeEventListener('end', handleEnd);
+      controls.removeEventListener('change', handleChange);
+    };
+  }, [camera, isReady]); // FIXED: Remove isMobile dependency
+
+  // FIXED: Only prevent rendering if camera isn't ready, allow mobile
+  if (!isReady) {
+    return null;
+  }
+
+  // FIXED: Always render OrbitControls - no mobile restriction
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enablePan={false}
+      enableZoom={false}
+      enableRotate={true}        // FIXED: Always true, no mobile restriction
+      rotateSpeed={0.6}
+      minDistance={8}
+      maxDistance={25}
+      minPolarAngle={Math.PI / 8}
+      maxPolarAngle={Math.PI - Math.PI / 8}
+      enableDamping={true}
+      dampingFactor={0.1}
+      autoRotate={false}
+    />
+  );
+};
+
+// Scene component that brings everything together - ONLY 3D objects
+const Scene: React.FC<{ particleTheme: typeof PARTICLE_THEMES[0] }> = ({ particleTheme }) => {
+  // Generate photo positions for 100 photos covering the entire floor plane
+  const photoPositions = useMemo(() => {
+    const positions: Array<{
+      position: [number, number, number];
+      rotation: [number, number, number];
+      imageUrl: string;
+    }> = [];
+
+    // Floor is 35x35 units, we want to cover it evenly
+    // Let's create a 10x10 grid to get exactly 100 photos
+    const gridSize = 10;
+    const floorSize = 30; // Slightly smaller than floor to have margin
+    const spacing = floorSize / (gridSize - 1); // Even spacing
+    
+    let photoIndex = 0;
+    
+    for (let row = 0; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
+        // Calculate position to center the grid on the floor
+        const x = (col - (gridSize - 1) / 2) * spacing;
+        const z = (row - (gridSize - 1) / 2) * spacing;
+        
+        // Add small random offset for organic feel (but keep photos in their grid positions)
+        const xOffset = (Math.random() - 0.5) * 0.5;
+        const zOffset = (Math.random() - 0.5) * 0.5;
+        
+        // Vary height in a wave pattern across the grid
+        const baseHeight = 1.5;
+        const waveHeight = Math.sin(row * 0.3) * Math.cos(col * 0.3) * 1.5;
+        const randomHeight = Math.random() * 0.8;
+        const y = baseHeight + waveHeight + randomHeight;
+        
+        // Random rotations for natural look
+        const rotationX = (Math.random() - 0.5) * 0.3;
+        const rotationY = (Math.random() - 0.5) * 0.6;
+        const rotationZ = (Math.random() - 0.5) * 0.2;
+        
+        // Cycle through party photos
+        const imageUrl = DEMO_PHOTOS[photoIndex % DEMO_PHOTOS.length];
+        photoIndex++;
+        
+        positions.push({
+          position: [x + xOffset, y, z + zOffset] as [number, number, number],
+          rotation: [rotationX, rotationY, rotationZ] as [number, number, number],
+          imageUrl: imageUrl,
+        });
+      }
+    }
+    
+    console.log(`Generated ${positions.length} photo positions in ${gridSize}x${gridSize} grid`);
+    return positions;
+  }, []);
+
+  return (
+    <>
+      {/* Gradient Background Sphere */}
+      <GradientBackground />
+      
+      {/* ENHANCED LIGHTING SETUP - Complete coverage with no dark spots */}
+      
+      {/* Strong ambient light base - ensures minimum brightness everywhere */}
+      <ambientLight intensity={0.4} color="#ffffff" />
+      
+      {/* Key Light - Main directional light from above */}
+      <directionalLight
+        position={[5, 10, 5]}
+        intensity={0.5}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Fill Light - Opposite side to key light */}
+      <directionalLight
+        position={[-5, 8, -5]}
+        intensity={0.4}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Rim Light - Back lighting for depth */}
+      <directionalLight
+        position={[0, 12, -8]}
+        intensity={0.3}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Bottom Fill Lights - Eliminate shadows underneath */}
+      <directionalLight
+        position={[5, 2, 5]}
+        intensity={0.25}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      <directionalLight
+        position={[-5, 2, -5]}
+        intensity={0.25}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Side Lights - Ensure no dark sides */}
+      <directionalLight
+        position={[10, 5, 0]}
+        intensity={0.2}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      <directionalLight
+        position={[-10, 5, 0]}
+        intensity={0.2}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Front Lights - Illuminate photos facing camera */}
+      <directionalLight
+        position={[0, 5, 10]}
+        intensity={0.25}
+        color="#ffffff"
+        castShadow={false}
+      />
+      
+      {/* Point Lights for localized brightness boost */}
+      <pointLight 
+        position={[0, 6, 0]} 
+        intensity={0.3} 
+        color="#ffffff" 
+        distance={20}
+        decay={2}
+      />
+      
+      <pointLight 
+        position={[0, 1, 6]} 
+        intensity={0.2} 
+        color="#ffffff" 
+        distance={15}
+        decay={2}
+      />
+      
+      {/* Additional ring of lights around the scene */}
+      <pointLight position={[8, 4, 0]} intensity={0.2} color="#ffffff" distance={12} />
+      <pointLight position={[-8, 4, 0]} intensity={0.2} color="#ffffff" distance={12} />
+      <pointLight position={[0, 4, 8]} intensity={0.2} color="#ffffff" distance={12} />
+      <pointLight position={[0, 4, -8]} intensity={0.2} color="#ffffff" distance={12} />
+      
+      {/* Purple accent lights for atmosphere (reduced intensity) */}
+      <spotLight
+        position={[-8, 12, -8]}
+        angle={Math.PI / 4}
+        penumbra={0.8}
+        intensity={0.3}
+        color="#8b5cf6"
+        castShadow={false}
+      />
+      
+      <spotLight
+        position={[8, 10, -8]}
+        angle={Math.PI / 4}
+        penumbra={0.8}
+        intensity={0.25}
+        color="#a855f7"
+        castShadow={false}
+      />
+      
+      {/* FIXED: Smart Camera Controls - Always Interactive */}
+      <SmartCameraControls />
+      
+      <ReflectiveFloor />
+      <Floor />
+      <Grid colorTheme={particleTheme} />
+      
+      {/* Milky Way Particle System */}
+      <MilkyWayParticleSystem colorTheme={particleTheme} photoPositions={photoPositions} />
+      
+      {/* Floating Photos */}
+      {photoPositions.map((photo, index) => (
+        <FloatingPhoto
+          key={index}
+          position={photo.position}
+          rotation={photo.rotation}
+          imageUrl={photo.imageUrl}
+          index={index}
+        />
+      ))}
+      
+      {/* Enhanced fog for more dramatic atmosphere */}
+      <fog attach="fog" args={['#1a0a2e', 15, 35]} />
+    </>
+  );
+};
+
+const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleError = () => setHasError(true);
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-black/40">
+        <div className="text-center text-white/60">
+          <div className="w-16 h-16 border-2 border-purple-500/30 rounded-full mx-auto mb-4"></div>
+          <p>3D Scene Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+const LoadingFallback: React.FC = () => (
+  <mesh>
+    <sphereGeometry args={[0.1, 8, 8]} />
+    <meshBasicMaterial color="#8b5cf6" />
+  </mesh>
+);
+
+const HeroScene: React.FC<{ onThemeChange?: (theme: typeof PARTICLE_THEMES[0]) => void }> = ({ onThemeChange }) => {
+  // State for particle theme - moved to main component
+  const [particleTheme, setParticleTheme] = React.useState(PARTICLE_THEMES[0]);
+
+  // Notify parent when theme changes
+  const handleThemeChange = (newTheme: typeof PARTICLE_THEMES[0]) => {
+    setParticleTheme(newTheme);
+    if (onThemeChange) {
+      onThemeChange(newTheme);
+    }
+  };
+
+  return (
+    <ErrorBoundary>
+      {/* Particle Theme Controls - positioned OUTSIDE Canvas at better location */}
+      <div className="absolute top-4 right-4 z-50">
+        <div className="relative">
+          <button
+            onClick={() => {
+              const currentIndex = PARTICLE_THEMES.findIndex(theme => theme.name === particleTheme.name);
+              const nextIndex = (currentIndex + 1) % PARTICLE_THEMES.length;
+              handleThemeChange(PARTICLE_THEMES[nextIndex]);
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-lg text-white hover:bg-black/40 transition-all duration-200 shadow-lg text-sm"
+            aria-label="Change particle colors"
+          >
+            <Palette size={16} />
+            <span className="hidden sm:inline">{particleTheme.name}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* FIXED: Canvas - Now fully interactive */}
+      <Canvas
+        className="absolute inset-0 w-full h-full"
+        camera={{ position: [15, 3, 15], fov: 45 }}
+        shadows={false}
+        gl={{ 
+          antialias: true, 
+          alpha: true,
+          powerPreference: "high-performance",
+          preserveDrawingBuffer: false,
+        }}
+        style={{ 
+          background: 'transparent',
+          pointerEvents: 'auto',          // FIXED: Changed from 'none' to 'auto'
+          touchAction: 'manipulation',    // FIXED: Changed from 'none' to 'manipulation'
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+          zIndex: 1
+        }}
+        onCreated={({ gl }) => {
+          gl.shadowMap.enabled = false;
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.2;
+        }}
+        frameloop="always"
+        dpr={[1, 2]}
+      >
+        <Suspense fallback={<LoadingFallback />}>
+          <Scene particleTheme={particleTheme} />
+        </Suspense>
+      </Canvas>
+    </ErrorBoundary>
+  );
+};
+
+export default HeroScene;
+
+export default HeroScene

@@ -652,7 +652,7 @@ const PhotoboothPage: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
           {/* Camera/Photo View */}
           <div className="flex-1 flex justify-center">
-            <div className="bg-gray-900 rounded-lg overflow-hidden w-full max-w-sm lg:max-w-md">
+            <div className="bg-gray-900 rounded-lg overflow-hidden w-full max-w-xs sm:max-w-sm lg:max-w-md">
               {photo ? (
                 /* Photo Preview - 9:16 aspect ratio */
                 <div className="relative aspect-[9/16]">
@@ -663,7 +663,7 @@ const PhotoboothPage: React.FC = () => {
                   />
                   
                   {/* Photo Controls Overlay */}
-                  <div className="absolute bottom-4 left-4 right-4">
+                  <div className="absolute bottom-3 left-3 right-3">
                     <div className="flex justify-center space-x-2">
                       <button
                         onClick={retakePhoto}
@@ -702,7 +702,7 @@ const PhotoboothPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                /* Camera View - 9:16 aspect ratio */
+                /* Camera View - 9:16 aspect ratio, smaller on mobile */
                 <div className="relative aspect-[9/16] bg-gray-800">
                   {/* Video Element */}
                   <video
@@ -752,12 +752,12 @@ const PhotoboothPage: React.FC = () => {
                   )}
                   
                   {/* Text Overlay Input - All devices */}
-                  <div className="absolute top-3 left-3 right-3">
+                  <div className="absolute top-2 left-2 right-2 lg:top-3 lg:left-3 lg:right-3">
                     <textarea
                       value={text}
                       onChange={(e) => setText(e.target.value)}
                       placeholder="Add text to your photo..."
-                      className="w-full h-16 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-white placeholder-gray-300 resize-none focus:outline-none focus:border-purple-500 text-sm"
+                      className="w-full h-12 lg:h-16 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-2 py-1.5 lg:px-3 lg:py-2 text-white placeholder-gray-300 resize-none focus:outline-none focus:border-purple-500 text-xs lg:text-sm"
                       maxLength={100}
                     />
                     <div className="flex justify-between items-center mt-1">
@@ -779,9 +779,9 @@ const PhotoboothPage: React.FC = () => {
                   {text.trim() && cameraState === 'active' && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div 
-                        className="text-white font-bold text-center px-4 py-2 bg-black/50 rounded-lg max-w-[85%]"
+                        className="text-white font-bold text-center px-3 py-2 bg-black/50 rounded-lg max-w-[85%]"
                         style={{ 
-                          fontSize: 'clamp(0.875rem, 3.5vw, 1.5rem)',
+                          fontSize: 'clamp(0.75rem, 3vw, 1.25rem)',
                           textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
                         }}
                       >
@@ -792,12 +792,12 @@ const PhotoboothPage: React.FC = () => {
                   
                   {/* Capture Button */}
                   {cameraState === 'active' && (
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                    <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
                       <button
                         onClick={capturePhoto}
-                        className="w-14 h-14 bg-white rounded-full border-4 border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center"
+                        className="w-12 h-12 lg:w-14 lg:h-14 bg-white rounded-full border-4 border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center"
                       >
-                        <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
+                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gray-300 rounded-full"></div>
                       </button>
                     </div>
                   )}

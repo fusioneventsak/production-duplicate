@@ -884,6 +884,7 @@ const SmartCameraControls: React.FC = () => {
   const baseRadius = useRef(15);
   const isMobile = useIsMobile();
   const [isReady, setIsReady] = React.useState(false);
+  const touchStartX = useRef(0);
 
   // Wait for camera to be properly initialized
   React.useEffect(() => {
@@ -892,6 +893,64 @@ const SmartCameraControls: React.FC = () => {
     }
   }, [camera]);
 
+  // Add touch event handlers for mobile devices
+  React.useEffect(() => {
+    if (!isMobile) return;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        touchStartX.current = e.touches[0].clientX;
+        isUserInteracting.current = true;
+        lastInteractionTime.current = Date.now();
+      }
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isUserInteracting.current || e.touches.length !== 1) return;
+      
+      // Calculate horizontal movement only
+      const touchX = e.touches[0].clientX;
+      const deltaX = touchX - touchStartX.current;
+      
+      // Update rotation based on horizontal movement only
+      if (camera && controlsRef.current) {
+        rotationAngle.current -= deltaX * 0.005;
+        
+        // Calculate camera position in a circle around the scene
+        const radius = baseRadius.current;
+        const height = camera.position.y; // Keep current height
+        
+        camera.position.x = Math.cos(rotationAngle.current) * radius;
+        camera.position.z = Math.sin(rotationAngle.current) * radius;
+        
+        // Always look at the center of the scene
+        camera.lookAt(0, 0, 0);
+        
+        // Update controls
+        controlsRef.current.update();
+      }
+      
+      // Update touch start position for next move
+      touchStartX.current = touchX;
+      lastInteractionTime.current = Date.now();
+    };
+    
+    const handleTouchEnd = () => {
+      isUserInteracting.current = false;
+      lastInteractionTime.current = Date.now();
+    };
+    
+    // Add event listeners to the document
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile, camera]);
   useFrame((state) => {
     if (!camera || !camera.position) return;
     
@@ -1236,8 +1295,11 @@ const HeroScene: React.FC<{ onThemeChange?: (theme: typeof PARTICLE_THEMES[0]) =
           <button
             onClick={() => {
               const currentIndex = PARTICLE_THEMES.findIndex(theme => theme.name === particleTheme.name);
-              const nextIndex = (currentIndex + 1) % PARTICLE_THEMES.length;
-              handleThemeChange(PARTICLE_THEMES[nextIndex]);
+              pointerEvents: 'auto',
+              touchAction: 'pan-y', // Allow vertical scrolling on mobile
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+              userSelect: 'none'
             }}
             className="flex items-center gap-2 px-3 py-2 bg-black/30 backdrop-blur-md border border-white/20 rounded-lg text-white hover:bg-black/40 transition-all duration-200 shadow-lg text-sm"
             aria-label="Change particle colors"
@@ -1285,5 +1347,3 @@ const HeroScene: React.FC<{ onThemeChange?: (theme: typeof PARTICLE_THEMES[0]) =
 };
 
 export default HeroScene;
-
-export default HeroScene

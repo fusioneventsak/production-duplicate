@@ -107,6 +107,7 @@ interface CollageStore {
   fetchCollageById: (id: string) => Promise<Collage | null>;
   createCollage: (name: string) => Promise<Collage | null>;
   updateCollageSettings: (collageId: string, settings: Partial<SceneSettings>) => Promise<any>;
+  updateCollageName: (collageId: string, name: string) => Promise<any>;
   uploadPhoto: (collageId: string, file: File) => Promise<Photo | null>;
   deletePhoto: (photoId: string) => Promise<void>;
   fetchPhotosByCollageId: (collageId: string) => Promise<void>;
@@ -501,6 +502,39 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
       return data;
     } catch (error: any) {
       console.error('Failed to update collage settings:', error.message);
+      throw error;
+    }
+  },
+
+  // NEW: Update collage name
+  updateCollageName: async (collageId: string, name: string) => {
+    try {
+      console.log('📝 Updating collage name:', collageId, name);
+
+      const { data, error } = await supabase
+        .from('collages')
+        .update({ name })
+        .eq('id', collageId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      set((state) => ({
+        currentCollage: state.currentCollage ? {
+          ...state.currentCollage,
+          name: name
+        } : null,
+        collages: state.collages.map(collage => 
+          collage.id === collageId ? { ...collage, name } : collage
+        )
+      }));
+
+      console.log('✅ Collage name updated successfully');
+      return data;
+    } catch (error: any) {
+      console.error('❌ Failed to update collage name:', error);
       throw error;
     }
   },

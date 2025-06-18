@@ -23,13 +23,13 @@ function App() {
         <Route path="/join" element={<JoinCollage />} />
         <Route path="/collage/:code" element={<CollageViewerPage />} />
         <Route path="/photobooth/:code" element={<PhotoboothPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        
+        {/* Protected routes - require authentication */}
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/dashboard/collage/:id" element={<CollageEditorPage />} />
-        
-        {/* FIXED: Changed from /moderation/:id to /collage/:id/moderation */}
         <Route path="/collage/:id/moderation" element={<CollageModerationPage />} />
-        
-        {/* Keep the old route for backwards compatibility if needed */}
         <Route path="/moderation/:id" element={<CollageModerationPage />} />
       </Routes>
     </Router>

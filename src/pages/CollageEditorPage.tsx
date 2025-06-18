@@ -217,11 +217,11 @@ const CollageEditorPage: React.FC = () => {
             The collage you're looking for doesn't exist or you don't have permission to edit it.
           </p>
           <Link
-            to="/dashboard"
+            to="/join"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            Try Another Code
           </Link>
         </div>
       </Layout>
@@ -237,7 +237,7 @@ const CollageEditorPage: React.FC = () => {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-4">
                 <Link 
-                  to="/dashboard" 
+                  to="/join" 
                   className="text-gray-400 hover:text-white transition-colors"
                 >
                   <ChevronLeft className="w-6 h-6" />

@@ -1,7 +1,7 @@
 // src/pages/CollageViewerPage.tsx - Clean version with transparent header
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Share2, Upload, Edit, Maximize2, ChevronLeft, Camera } from 'lucide-react';
+import { Share2, Upload, Edit, Maximize2, ChevronLeft, Camera, X } from 'lucide-react';
 import { useCollageStore } from '../store/collageStore';
 import { ErrorBoundary } from 'react-error-boundary';
 import CollageScene from '../components/three/CollageScene';

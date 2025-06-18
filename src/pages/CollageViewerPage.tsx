@@ -50,6 +50,13 @@ const CollageViewerPage: React.FC = () => {
   const [controlsVisible, setControlsVisible] = useState(true);
   const navigate = useNavigate();
 
+  // Close modal when clicking outside
+  const handleModalBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setShowUploader(false);
+    }
+  };
+
   // Normalize code to uppercase for consistent database lookup
   const normalizedCode = code?.toUpperCase();
 
@@ -90,6 +97,20 @@ const CollageViewerPage: React.FC = () => {
       console.error('Error toggling fullscreen:', err);
     }
   };
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showUploader) {
+        setShowUploader(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [showUploader]);
 
   // Show/hide controls in fullscreen
   useEffect(() => {
@@ -257,26 +278,55 @@ const CollageViewerPage: React.FC = () => {
 
       {/* Photo Uploader Modal */}
       {showUploader && (
-        <div className="absolute inset-0 z-30 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Upload Photos</h3>
+        <div 
+          className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={handleModalBackdropClick}
+        >
+          <div className="bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <h3 className="text-xl font-semibold text-white">Upload Photos</h3>
               <button
                 onClick={() => setShowUploader(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white transition-colors p-1 hover:bg-gray-700 rounded"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
-            <PhotoUploader 
-              collageId={currentCollage.id}
-              onUploadComplete={() => {
-                console.log('📸 Photo upload completed');
-                if (!isRealtimeConnected) {
-                  handleManualRefresh();
-                }
-              }}
-            />
+            
+            {/* Modal Content */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* Upload Instructions */}
+                <div className="text-center text-gray-300 text-sm">
+                  <p>Share your photos with the collage!</p>
+                  <p className="text-gray-400 text-xs mt-1">Supported: JPG, PNG, GIF, WebP (max 10MB)</p>
+                </div>
+                
+                {/* Photo Uploader Component */}
+                <div className="min-h-[200px]">
+                  <PhotoUploader 
+                    collageId={currentCollage.id}
+                    onUploadComplete={() => {
+                      console.log('📸 Photo upload completed from modal');
+                      if (!isRealtimeConnected) {
+                        handleManualRefresh();
+                      }
+                      // Show success message and optionally close modal
+                      setTimeout(() => {
+                        // setShowUploader(false); // Uncomment to auto-close
+                      }, 1500);
+                    }}
+                  />
+                </div>
+                
+                {/* Additional Info */}
+                <div className="text-center text-xs text-gray-500 border-t border-gray-700 pt-4">
+                  <p>Photos will appear in the collage automatically</p>
+                  <p>Code: <span className="font-mono text-gray-400">{currentCollage.code}</span></p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -1,3 +1,4 @@
+// src/pages/JoinCollage.tsx - FIXED: Use uppercase codes consistently
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
@@ -17,8 +18,16 @@ const JoinCollage: React.FC = () => {
       return;
     }
     
-    // Navigate to the collage viewer with the entered code
-    navigate(`/photobooth/${code.trim().toLowerCase()}`);
+    // FIXED: Navigate with uppercase code to match database format
+    const normalizedCode = code.trim().toUpperCase();
+    console.log('🔍 Navigating to photobooth with code:', normalizedCode);
+    navigate(`/photobooth/${normalizedCode}`);
+  };
+
+  // Auto-convert input to uppercase for better UX
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setCode(value);
   };
 
   return (
@@ -47,10 +56,14 @@ const JoinCollage: React.FC = () => {
                 id="code"
                 type="text"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Enter code (e.g. abc123)"
-                className="w-full p-3 bg-black/30 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                onChange={handleInputChange}
+                placeholder="Enter code (e.g. ABC12345)"
+                className="w-full p-3 bg-black/30 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent uppercase tracking-wider"
+                maxLength={8}
               />
+              <p className="text-xs text-gray-400 mt-1">
+                Codes are automatically converted to uppercase
+              </p>
             </div>
             
             <button
@@ -61,6 +74,18 @@ const JoinCollage: React.FC = () => {
               <ArrowRight className="ml-2 h-4 w-4" />
             </button>
           </form>
+          
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-400">
+              Don't have a code?{' '}
+              <button
+                onClick={() => navigate('/')}
+                className="text-purple-400 hover:text-purple-300 underline"
+              >
+                Create your own collage
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </Layout>

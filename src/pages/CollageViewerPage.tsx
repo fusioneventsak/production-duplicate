@@ -279,12 +279,12 @@ const CollageViewerPage: React.FC = () => {
       {/* Photo Uploader Modal */}
       {showUploader && (
         <div 
-          className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
           onClick={handleModalBackdropClick}
         >
-          <div className="bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+          <div className="bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg my-8 mx-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+            <div className="flex items-center justify-between p-6 border-b border-gray-700 sticky top-0 bg-gray-900 rounded-t-xl">
               <h3 className="text-xl font-semibold text-white">Upload Photos</h3>
               <button
                 onClick={() => setShowUploader(false)}
@@ -294,8 +294,8 @@ const CollageViewerPage: React.FC = () => {
               </button>
             </div>
             
-            {/* Modal Content */}
-            <div className="p-6">
+            {/* Modal Content - Scrollable */}
+            <div className="p-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
               <div className="space-y-4">
                 {/* Upload Instructions */}
                 <div className="text-center text-gray-300 text-sm">

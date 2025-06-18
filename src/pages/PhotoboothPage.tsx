@@ -29,7 +29,7 @@ const PhotoboothPage: React.FC = () => {
   const [cameraState, setCameraState] = useState<CameraState>('idle');
   
   const [showError, setShowError] = useState(false);
-  const { currentCollage, fetchCollageByCode, uploadPhoto, setupRealtimeSubscription, cleanupRealtimeSubscription, loading } = useCollageStore();
+  const { currentCollage, fetchCollageByCode, uploadPhoto, setupRealtimeSubscription, cleanupRealtimeSubscription, loading, error: storeError } = useCollageStore();
 
   // FIXED: Normalize code to uppercase for consistent database lookup
   const normalizedCode = code?.toUpperCase();
@@ -447,7 +447,7 @@ const PhotoboothPage: React.FC = () => {
 
   // Delay showing error to prevent flash
   useEffect(() => {
-    if (error && !loading && !currentCollage) {
+    if (storeError && !loading && !currentCollage) {
       const timer = setTimeout(() => {
         setShowError(true);
       }, 1000); // Wait 1 second before showing error
@@ -456,7 +456,7 @@ const PhotoboothPage: React.FC = () => {
     } else {
       setShowError(false);
     }
-  }, [error, loading, currentCollage]);
+  }, [storeError, loading, currentCollage]);
 
   // Setup realtime subscription when collage is loaded
   useEffect(() => {
@@ -508,10 +508,8 @@ const PhotoboothPage: React.FC = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [photo, cameraState, startCamera, selectedDevice]);
 
-  const { loading } = useCollageStore();
-
   // Show loading while fetching collage OR if we don't have a collage yet but no error
-  if (loading || (!currentCollage && !error)) {
+  if (loading || (!currentCollage && !storeError)) {
     return (
       <Layout>
         <div className="min-h-[calc(100vh-160px)] flex items-center justify-center">
@@ -528,7 +526,7 @@ const PhotoboothPage: React.FC = () => {
   }
 
   // Show error ONLY if we have an actual error AND we're not loading AND showError is true
-  if (showError && error && !loading && !currentCollage) {
+  if (showError && storeError && !loading && !currentCollage) {
     return (
       <Layout>
         <div className="min-h-[calc(100vh-160px)] flex items-center justify-center">
@@ -536,7 +534,7 @@ const PhotoboothPage: React.FC = () => {
             <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-6">
               <h2 className="text-xl font-bold text-white mb-4">Collage Not Found</h2>
               <p className="text-red-200 mb-4">
-                {error || `No collage found with code "${normalizedCode}"`}
+                {storeError || `No collage found with code "${normalizedCode}"`}
               </p>
               <div className="space-y-3">
                 <button

@@ -1,4 +1,4 @@
-// src/pages/PhotoboothPage.tsx - FIXED: Video element null safety
+// src/pages/PhotoboothPage.tsx - FIXED: Case-insensitive code handling
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera, SwitchCamera, Download, Send, X, RefreshCw, Type, ArrowLeft, Settings } from 'lucide-react';
@@ -29,6 +29,9 @@ const PhotoboothPage: React.FC = () => {
   const [cameraState, setCameraState] = useState<CameraState>('idle');
   
   const { currentCollage, fetchCollageByCode, uploadPhoto, setupRealtimeSubscription, cleanupRealtimeSubscription } = useCollageStore();
+
+  // FIXED: Normalize code to uppercase for consistent database lookup
+  const normalizedCode = code?.toUpperCase();
 
   const cleanupCamera = useCallback(() => {
     console.log('🧹 Cleaning up camera...');
@@ -432,12 +435,13 @@ const PhotoboothPage: React.FC = () => {
     }, 100);
   }, [startCamera, selectedDevice]);
 
-  // Load collage on mount
+  // FIXED: Load collage on mount with normalized (uppercase) code
   useEffect(() => {
-    if (code) {
-      fetchCollageByCode(code);
+    if (normalizedCode) {
+      console.log('🔍 Fetching collage with normalized code:', normalizedCode);
+      fetchCollageByCode(normalizedCode);
     }
-  }, [code, fetchCollageByCode]);
+  }, [normalizedCode, fetchCollageByCode]);
 
   // Setup realtime subscription when collage is loaded
   useEffect(() => {
@@ -489,13 +493,49 @@ const PhotoboothPage: React.FC = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [photo, cameraState, startCamera, selectedDevice]);
 
-  if (!currentCollage) {
+  // Show loading while fetching collage
+  if (!currentCollage && !error) {
     return (
       <Layout>
         <div className="min-h-[calc(100vh-160px)] flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-4"></div>
             <p className="text-white">Loading photobooth...</p>
+            <p className="text-gray-400 text-sm mt-2">
+              Looking for collage: {normalizedCode}
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show error if collage not found
+  if (error || !currentCollage) {
+    return (
+      <Layout>
+        <div className="min-h-[calc(100vh-160px)] flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-6">
+              <h2 className="text-xl font-bold text-white mb-4">Collage Not Found</h2>
+              <p className="text-red-200 mb-4">
+                {error || `No collage found with code "${normalizedCode}"`}
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate('/join')}
+                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  Try Another Code
+                </button>
+                <button
+                  onClick={() => navigate('/')}
+                  className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  Go Home
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </Layout>

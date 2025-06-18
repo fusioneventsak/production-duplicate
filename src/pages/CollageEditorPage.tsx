@@ -9,7 +9,7 @@ import Layout from '../components/layout/Layout';
 import SceneSettings from '../components/collage/SceneSettings';
 import CollageScene from '../components/three/CollageScene';
 import PhotoUploader from '../components/collage/PhotoUploader';
-import CollagePhotos from '../components/collage/CollagePhotos'; // FIXED: This is now correct as default import
+import CollagePhotos from '../components/collage/CollagePhotos';
 
 type Tab = 'settings' | 'photos';
 
@@ -74,13 +74,14 @@ const CollageEditorPage: React.FC = () => {
     if (id) {
       console.log('🎨 EDITOR: Loading collage:', id);
       fetchCollageById(id);
+      setupRealtimeSubscription(id);
     }
 
     return () => {
       console.log('🎨 EDITOR: Cleaning up subscription');
       cleanupRealtimeSubscription();
     };
-  }, [id, fetchCollageById, cleanupRealtimeSubscription]);
+  }, [id, fetchCollageById, setupRealtimeSubscription, cleanupRealtimeSubscription]);
 
   // Sync persisted collage settings to scene store when collage loads
   useEffect(() => {
@@ -276,6 +277,12 @@ const CollageEditorPage: React.FC = () => {
                   <Shield className="w-4 h-4" />
                   <span>Moderate</span>
                 </Link>
+                <Link
+                  to={`/photobooth/${currentCollage.code}`}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm transition-colors"
+                >
+                  📸 Photobooth
+                </Link>
               </div>
             </div>
           </div>
@@ -352,7 +359,7 @@ const CollageEditorPage: React.FC = () => {
                   View Live
                 </Link>
                 <Link
-                  to={`/collage/${currentCollage.code}/moderation`}
+                  to={`/collage/${currentCollage.id}/moderation`}
                   className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
                 >
                   <Shield className="w-4 h-4" />

@@ -1,4 +1,4 @@
-// src/pages/PhotoboothPage.tsx
+// src/pages/PhotoboothPage.tsx - FIXED: Video element null safety
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera, SwitchCamera, Download, Send, X, RefreshCw, Type, ArrowLeft, Settings } from 'lucide-react';
@@ -67,63 +67,173 @@ const PhotoboothPage: React.FC = () => {
     }
   }, []);
 
+  // FIXED: Wait for video element to be available
+  const waitForVideoElement = useCallback(async (maxWaitMs: number = 5000): Promise<HTMLVideoElement | null> => {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < maxWaitMs) {
+      if (videoRef.current) {
+        console.log('✅ Video element is available');
+        return videoRef.current;
+      }
+      
+      console.log('⏳ Waiting for video element...');
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.error('❌ Video element not available after waiting');
+    return null;
+  }, []);
+
   const startCamera = useCallback(async (deviceId?: string) => {
+    // Prevent multiple simultaneous initializations
     if (isInitializingRef.current) {
-      console.log('⚠️ Camera already initializing, skipping...');
+      console.log('🔄 Camera initialization already in progress, skipping...');
       return;
     }
 
+    console.log('🎥 Starting camera initialization with device:', deviceId);
     isInitializingRef.current = true;
     setCameraState('starting');
     setError(null);
 
     try {
-      console.log('📹 Starting camera with device:', deviceId);
-      
-      // Clean up any existing stream first
+      // Clean up any existing camera first
       cleanupCamera();
 
-      // Get available devices if we don't have them
-      let videoDevices = devices;
-      if (videoDevices.length === 0) {
-        videoDevices = await getVideoDevices();
-        setDevices(videoDevices);
+      // FIXED: Wait for video element to be available before proceeding
+      const videoElement = await waitForVideoElement();
+      if (!videoElement) {
+        throw new Error('Video element not available - component may not be fully mounted');
       }
 
-      // Select device
-      const targetDeviceId = deviceId || videoDevices[0]?.deviceId;
-      if (!targetDeviceId) {
-        throw new Error('No camera device found');
-      }
+      // Small delay to ensure cleanup is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Request camera access
-      const constraints: MediaStreamConstraints = {
-        video: {
-          deviceId: targetDeviceId ? { exact: targetDeviceId } : undefined,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: !deviceId ? 'user' : undefined
-        },
-        audio: false
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        streamRef.current = stream;
-        setCameraState('active');
-        setSelectedDevice(targetDeviceId);
-        console.log('✅ Camera started successfully');
+      // Detect platform
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
+      const isMobile = isIOS || isAndroid;
+      
+      console.log('📱 Platform detected:', { isIOS, isAndroid, isMobile });
+      
+      // Build constraints based on platform
+      let constraints: MediaStreamConstraints;
+      
+      if (deviceId) {
+        constraints = {
+          video: {
+            deviceId: { exact: deviceId },
+            ...(isMobile ? { facingMode: "user" } : {}),
+            ...(isIOS ? {
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 }
+            } : {})
+          },
+          audio: false
+        };
       } else {
-        stream.getTracks().forEach(track => track.stop());
-        throw new Error('Video element not available');
+        constraints = {
+          video: isMobile ? { facingMode: "user" } : true,
+          audio: false
+        };
       }
-
+      
+      console.log('🔧 Using constraints:', constraints);
+      
+      // Get user media
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('✅ Got media stream:', mediaStream.active);
+      
+      // Update devices list after getting permission
+      const videoDevices = await getVideoDevices();
+      setDevices(videoDevices);
+      
+      // Auto-select front camera on mobile if not already selected
+      if (!selectedDevice && videoDevices.length > 0 && isMobile) {
+        const frontCamera = videoDevices.find(device => 
+          device.label.toLowerCase().includes('front') ||
+          device.label.toLowerCase().includes('user') ||
+          device.label.toLowerCase().includes('selfie') ||
+          device.label.toLowerCase().includes('facetime')
+        );
+        
+        if (frontCamera) {
+          console.log('📱 Auto-selecting front camera:', frontCamera.label);
+          setSelectedDevice(frontCamera.deviceId);
+        } else {
+          setSelectedDevice(videoDevices[0].deviceId);
+        }
+      }
+      
+      // FIXED: Double-check video element is still available
+      if (!videoRef.current) {
+        // Clean up stream if video element disappeared
+        mediaStream.getTracks().forEach(track => track.stop());
+        throw new Error('Video element became unavailable during setup');
+      }
+      
+      // Set up video element
+      videoRef.current.srcObject = mediaStream;
+      
+      // Setup event listeners
+      const video = videoRef.current;
+      
+      const handleLoadedMetadata = () => {
+        console.log('📹 Video metadata loaded, playing...');
+        if (!video) return;
+        
+        video.play().then(() => {
+          streamRef.current = mediaStream;
+          setCameraState('active');
+          console.log('✅ Camera active and streaming');
+        }).catch(playErr => {
+          console.error('❌ Failed to play video:', playErr);
+          setCameraState('error');
+          setError('Failed to start video playback');
+          // Clean up stream on play error
+          mediaStream.getTracks().forEach(track => track.stop());
+        });
+      };
+      
+      const handleError = (event: Event) => {
+        console.error('❌ Video element error:', event);
+        setCameraState('error');
+        setError('Video playback error');
+        // Clean up stream on video error
+        mediaStream.getTracks().forEach(track => track.stop());
+      };
+      
+      video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+      video.addEventListener('error', handleError, { once: true });
+      
+      // Timeout fallback
+      const timeoutId = setTimeout(() => {
+        if (cameraState === 'starting' && video) {
+          console.log('⏰ Camera start timeout, forcing play...');
+          video.play().catch(err => {
+            console.error('❌ Timeout play failed:', err);
+            setCameraState('error');
+            setError('Camera initialization timeout');
+            // Clean up stream on timeout
+            mediaStream.getTracks().forEach(track => track.stop());
+          });
+        }
+      }, 5000); // Increased timeout to 5 seconds
+      
+      // Clean up timeout when camera becomes active
+      const checkActive = setInterval(() => {
+        if (cameraState === 'active') {
+          clearTimeout(timeoutId);
+          clearInterval(checkActive);
+        }
+      }, 100);
+      
     } catch (err: any) {
-      console.error('❌ Camera error:', err);
-      let errorMessage = 'Failed to start camera: ';
+      console.error('❌ Camera initialization failed:', err);
+      setCameraState('error');
+      
+      let errorMessage = 'Failed to access camera. ';
       
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         errorMessage = 'Camera access denied. Please allow camera access and refresh the page.';
@@ -140,6 +250,7 @@ const PhotoboothPage: React.FC = () => {
             audio: false 
           });
           
+          // FIXED: Check video element again for fallback
           if (videoRef.current) {
             videoRef.current.srcObject = fallbackStream;
             await videoRef.current.play();
@@ -148,6 +259,10 @@ const PhotoboothPage: React.FC = () => {
             setError(null);
             console.log('✅ Fallback camera working');
             return;
+          } else {
+            // Clean up fallback stream if no video element
+            fallbackStream.getTracks().forEach(track => track.stop());
+            throw new Error('Video element not available for fallback');
           }
         } catch (fallbackError) {
           console.error('❌ Fallback also failed:', fallbackError);
@@ -158,11 +273,10 @@ const PhotoboothPage: React.FC = () => {
       }
       
       setError(errorMessage);
-      setCameraState('error');
     } finally {
       isInitializingRef.current = false;
     }
-  }, [selectedDevice, cameraState, cleanupCamera, getVideoDevices, devices]);
+  }, [selectedDevice, cameraState, cleanupCamera, getVideoDevices, waitForVideoElement]);
 
   const switchCamera = useCallback(() => {
     if (devices.length <= 1) return;
@@ -337,17 +451,18 @@ const PhotoboothPage: React.FC = () => {
     };
   }, [currentCollage?.id, setupRealtimeSubscription, cleanupRealtimeSubscription]);
 
-  // Initialize camera when component mounts and when returning from photo view
+  // FIXED: Initialize camera with better timing
   useEffect(() => {
-    if (!photo && cameraState === 'idle' && !isInitializingRef.current) {
+    if (!photo && cameraState === 'idle' && !isInitializingRef.current && currentCollage) {
       console.log('🚀 Initializing camera...');
+      // Increased delay to ensure DOM is ready
       const timer = setTimeout(() => {
         startCamera(selectedDevice);
-      }, 200);
+      }, 500);
       
       return () => clearTimeout(timer);
     }
-  }, [photo, cameraState, startCamera, selectedDevice]);
+  }, [photo, cameraState, startCamera, selectedDevice, currentCollage]);
 
   // Cleanup on unmount
   useEffect(() => {

@@ -1345,5 +1345,3 @@ const HeroScene: React.FC<{ onThemeChange?: (theme: typeof PARTICLE_THEMES[0]) =
     </ErrorBoundary>
   );
 };
-
-export default HeroScene;

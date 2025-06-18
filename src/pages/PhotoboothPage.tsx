@@ -314,15 +314,42 @@ const PhotoboothPage: React.FC = () => {
 
     if (!context) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Calculate 9:16 aspect ratio dimensions
+    const targetAspectRatio = 9 / 16;
+    const videoAspectRatio = video.videoWidth / video.videoHeight;
+    
+    let sourceWidth, sourceHeight, sourceX, sourceY;
+    
+    if (videoAspectRatio > targetAspectRatio) {
+      // Video is wider than target, crop horizontally
+      sourceHeight = video.videoHeight;
+      sourceWidth = sourceHeight * targetAspectRatio;
+      sourceX = (video.videoWidth - sourceWidth) / 2;
+      sourceY = 0;
+    } else {
+      // Video is taller than target, crop vertically  
+      sourceWidth = video.videoWidth;
+      sourceHeight = sourceWidth / targetAspectRatio;
+      sourceX = 0;
+      sourceY = (video.videoHeight - sourceHeight) / 2;
+    }
 
-    // Draw the video frame
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Set canvas dimensions to 9:16 aspect ratio
+    const canvasWidth = 540; // 9:16 ratio at reasonable resolution
+    const canvasHeight = 960;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+
+    // Draw the cropped video frame
+    context.drawImage(
+      video,
+      sourceX, sourceY, sourceWidth, sourceHeight, // Source rectangle (cropped)
+      0, 0, canvasWidth, canvasHeight // Destination rectangle (full canvas)
+    );
 
     // Add text overlay if provided
     if (text.trim()) {
-      const fontSize = Math.min(canvas.width, canvas.height) * 0.08;
+      const fontSize = Math.min(canvasWidth, canvasHeight) * 0.06; // Smaller font for 9:16
       context.font = `bold ${fontSize}px Arial`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
@@ -339,7 +366,7 @@ const PhotoboothPage: React.FC = () => {
       context.fillStyle = 'white';
       
       // Split text into lines if too long
-      const maxWidth = canvas.width * 0.9;
+      const maxWidth = canvasWidth * 0.9;
       const words = text.split(' ');
       const lines: string[] = [];
       let currentLine = words[0];
@@ -359,11 +386,11 @@ const PhotoboothPage: React.FC = () => {
       // Draw each line
       const lineHeight = fontSize * 1.2;
       const totalHeight = lines.length * lineHeight;
-      const startY = (canvas.height - totalHeight) / 2 + fontSize / 2;
+      const startY = (canvasHeight - totalHeight) / 2 + fontSize / 2;
 
       lines.forEach((line, index) => {
         const textY = startY + index * lineHeight;
-        const textX = canvas.width / 2;
+        const textX = canvasWidth / 2;
         
         context.strokeText(line, textX, textY);
         context.fillText(line, textX, textY);
@@ -622,59 +649,61 @@ const PhotoboothPage: React.FC = () => {
         )}
 
         {/* Main Content */}
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
           {/* Camera/Photo View */}
           <div className="flex-1 flex justify-center">
-            <div className="bg-gray-900 rounded-lg overflow-hidden w-full max-w-md">
+            <div className="bg-gray-900 rounded-lg overflow-hidden w-full max-w-sm lg:max-w-md">
               {photo ? (
-                /* Photo Preview */
-                <div className="relative">
+                /* Photo Preview - 9:16 aspect ratio */
+                <div className="relative aspect-[9/16]">
                   <img 
                     src={photo} 
                     alt="Captured photo" 
-                    className="w-full h-auto"
+                    className="w-full h-full object-cover"
                   />
                   
                   {/* Photo Controls Overlay */}
-                  <div className="absolute bottom-4 left-4 right-4 flex justify-center space-x-3">
-                    <button
-                      onClick={retakePhoto}
-                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center space-x-2"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Retake</span>
-                    </button>
-                    
-                    <button
-                      onClick={downloadPhoto}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Download</span>
-                    </button>
-                    
-                    <button
-                      onClick={uploadToCollage}
-                      disabled={uploading}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded-lg transition-colors flex items-center space-x-2"
-                    >
-                      {uploading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Uploading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          <span>Upload to Collage</span>
-                        </>
-                      )}
-                    </button>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="flex justify-center space-x-2">
+                      <button
+                        onClick={retakePhoto}
+                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center space-x-2 text-sm"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        <span>Retake</span>
+                      </button>
+                      
+                      <button
+                        onClick={downloadPhoto}
+                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2 text-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download</span>
+                      </button>
+                      
+                      <button
+                        onClick={uploadToCollage}
+                        disabled={uploading}
+                        className="px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white rounded-lg transition-colors flex items-center space-x-2 text-sm"
+                      >
+                        {uploading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4" />
+                            <span>Upload</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
-                /* Camera View - Vertical on all devices */
-                <div className="relative aspect-[3/4] bg-gray-800">
+                /* Camera View - 9:16 aspect ratio */
+                <div className="relative aspect-[9/16] bg-gray-800">
                   {/* Video Element */}
                   <video
                     ref={videoRef}
@@ -690,17 +719,17 @@ const PhotoboothPage: React.FC = () => {
                       <div className="text-center text-white">
                         {cameraState === 'starting' && (
                           <>
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-4"></div>
-                            <p>Starting camera...</p>
+                            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-white mb-2"></div>
+                            <p className="text-sm">Starting camera...</p>
                           </>
                         )}
                         {cameraState === 'error' && (
                           <>
-                            <Camera className="w-12 h-12 mx-auto mb-4 text-red-400" />
-                            <p className="text-red-200">Camera unavailable</p>
+                            <Camera className="w-8 h-8 mx-auto mb-2 text-red-400" />
+                            <p className="text-red-200 text-sm mb-2">Camera unavailable</p>
                             <button
                               onClick={() => startCamera(selectedDevice)}
-                              className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
                             >
                               Retry
                             </button>
@@ -708,11 +737,11 @@ const PhotoboothPage: React.FC = () => {
                         )}
                         {cameraState === 'idle' && (
                           <>
-                            <Camera className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                            <p>Camera not started</p>
+                            <Camera className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm mb-2">Camera not started</p>
                             <button
                               onClick={() => startCamera(selectedDevice)}
-                              className="mt-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm transition-colors"
                             >
                               Start Camera
                             </button>
@@ -723,12 +752,12 @@ const PhotoboothPage: React.FC = () => {
                   )}
                   
                   {/* Text Overlay Input - All devices */}
-                  <div className="absolute top-4 left-4 right-4">
+                  <div className="absolute top-3 left-3 right-3">
                     <textarea
                       value={text}
                       onChange={(e) => setText(e.target.value)}
                       placeholder="Add text to your photo..."
-                      className="w-full h-20 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-white placeholder-gray-300 resize-none focus:outline-none focus:border-purple-500 text-sm"
+                      className="w-full h-16 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-white placeholder-gray-300 resize-none focus:outline-none focus:border-purple-500 text-sm"
                       maxLength={100}
                     />
                     <div className="flex justify-between items-center mt-1">
@@ -750,9 +779,9 @@ const PhotoboothPage: React.FC = () => {
                   {text.trim() && cameraState === 'active' && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div 
-                        className="text-white font-bold text-center px-4 py-2 bg-black/50 rounded-lg max-w-[90%]"
+                        className="text-white font-bold text-center px-4 py-2 bg-black/50 rounded-lg max-w-[85%]"
                         style={{ 
-                          fontSize: 'clamp(1rem, 4vw, 2rem)',
+                          fontSize: 'clamp(0.875rem, 3.5vw, 1.5rem)',
                           textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
                         }}
                       >
@@ -766,9 +795,9 @@ const PhotoboothPage: React.FC = () => {
                     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
                       <button
                         onClick={capturePhoto}
-                        className="w-16 h-16 bg-white rounded-full border-4 border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center"
+                        className="w-14 h-14 bg-white rounded-full border-4 border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center"
                       >
-                        <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+                        <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
                       </button>
                     </div>
                   )}
@@ -781,13 +810,13 @@ const PhotoboothPage: React.FC = () => {
           </div>
 
           {/* Controls Panel - Desktop Side Panel */}
-          <div className="w-full lg:w-80 space-y-6">
+          <div className="w-full lg:w-72 space-y-4 lg:space-y-6">
             {/* Camera Settings */}
             {devices.length > 1 && (
-              <div className="bg-gray-900 rounded-lg p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Settings className="w-5 h-5 text-purple-400" />
-                  <h3 className="text-lg font-semibold text-white">Camera Settings</h3>
+              <div className="bg-gray-900 rounded-lg p-4 lg:p-6">
+                <div className="flex items-center space-x-2 mb-3 lg:mb-4">
+                  <Settings className="w-4 h-4 lg:w-5 lg:h-5 text-purple-400" />
+                  <h3 className="text-base lg:text-lg font-semibold text-white">Camera Settings</h3>
                 </div>
                 
                 <div className="space-y-3">
@@ -797,7 +826,7 @@ const PhotoboothPage: React.FC = () => {
                   <select
                     value={selectedDevice}
                     onChange={(e) => handleDeviceChange(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500 text-sm"
                   >
                     {devices.map((device, index) => (
                       <option key={device.deviceId} value={device.deviceId}>
@@ -810,19 +839,19 @@ const PhotoboothPage: React.FC = () => {
             )}
 
             {/* Instructions */}
-            <div className="bg-gray-900 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">How to use</h3>
+            <div className="bg-gray-900 rounded-lg p-4 lg:p-6">
+              <h3 className="text-base lg:text-lg font-semibold text-white mb-3 lg:mb-4">How to use</h3>
               <div className="space-y-2 text-sm text-gray-300">
                 <p>1. Allow camera access when prompted</p>
                 <p>2. Add text in the field above the camera</p>
-                <p>3. Click the white button to take a photo</p>
+                <p>3. Tap the white button to take a photo</p>
                 <p>4. Review and upload to the collage</p>
               </div>
             </div>
 
             {/* Upload Tips */}
-            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-purple-300 mb-3">Tips</h3>
+            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 lg:p-6">
+              <h3 className="text-base lg:text-lg font-semibold text-purple-300 mb-3">Tips</h3>
               <div className="space-y-2 text-sm text-purple-200">
                 <p>• Hold your device steady for clearer photos</p>
                 <p>• Make sure you have good lighting</p>
@@ -833,12 +862,12 @@ const PhotoboothPage: React.FC = () => {
 
             {/* Collage Info */}
             {currentCollage && (
-              <div className="bg-gray-900 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-white mb-3">Collage Info</h3>
+              <div className="bg-gray-900 rounded-lg p-4 lg:p-6">
+                <h3 className="text-base lg:text-lg font-semibold text-white mb-3">Collage Info</h3>
                 <div className="space-y-2 text-sm text-gray-300">
                   <div className="flex justify-between">
                     <span>Name:</span>
-                    <span className="text-white">{currentCollage.name}</span>
+                    <span className="text-white truncate ml-2">{currentCollage.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Code:</span>

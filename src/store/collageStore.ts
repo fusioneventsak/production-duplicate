@@ -1,89 +1,12 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { nanoid } from 'nanoid';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 // Helper function to get file URL
 const getFileUrl = (bucket: string, path: string): string => {
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 };
-
-// Helper for deep merging objects
-function deepMerge(target: any, source: any): any {
-  const output = { ...target };
-  for (const key in source) {
-    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-      output[key] = deepMerge(target[key] || {}, source[key]);
-    } else {
-      output[key] = source[key];
-    }
-  }
-  return output;
-}
-
-// Default scene settings
-const defaultSettings = {
-  animationPattern: 'grid',
-  photoCount: 100,
-  animationSpeed: 50,
-  cameraDistance: 15,
-  cameraHeight: 8,
-  cameraRotationSpeed: 20,
-  photoSize: 1.0,
-  photoBrightness: 1.0,
-  backgroundColor: '#000000',
-  backgroundGradient: true,
-  backgroundGradientStart: '#1a1a2e',
-  backgroundGradientEnd: '#16213e',
-  backgroundGradientAngle: 45,
-  floorColor: '#111111',
-  showFloor: true,
-  showGrid: true,
-  ambientLightIntensity: 0.4,
-  spotlightIntensity: 0.8
-};
-
-export interface Photo {
-  id: string;
-  collage_id: string;
-  url: string;
-  created_at: string;
-  storage_path?: string;
-}
-
-export interface Collage {
-  id: string;
-  name: string;
-  code: string;
-  created_at: string;
-  createdAt?: string;
-  settings: any;
-  photoCount?: number;
-}
-
-export interface SceneSettings {
-  animationPattern?: string;
-  patterns?: any;
-  photoCount?: number;
-  animationSpeed?: number;
-  cameraDistance?: number;
-  cameraHeight?: number;
-  cameraRotationSpeed?: number;
-  photoSize?: number;
-  photoBrightness?: number;
-  backgroundColor?: string;
-  backgroundGradient?: boolean;
-  backgroundGradientStart?: string;
-  backgroundGradientEnd?: string;
-  backgroundGradientAngle?: number;
-  floorColor?: string;
-  showFloor?: boolean;
-  showGrid?: boolean;
-  ambientLightIntensity?: number;
-  spotlightIntensity?: number;
-  [key: string]: any;
-}
 
 // Store interface
 interface CollageStore {
@@ -93,9 +16,13 @@ interface CollageStore {
   loading: boolean;
   error: string | null;
   realtimeChannel: RealtimeChannel | null;
+  isRealtimeConnected: boolean;
+  lastRefreshTime: number;
+  pollingInterval: NodeJS.Timeout | null;
   
   fetchCollages: () => Promise<void>;
   fetchCollageById: (id: string) => Promise<void>;
+  fetchCollageByCode: (code: string) => Promise<Collage | null>;
   createCollage: (name: string) => Promise<Collage | null>;
   deleteCollage: (id: string) => Promise<void>;
   updateCollageName: (id: string, name: string) => Promise<void>;
@@ -105,6 +32,11 @@ interface CollageStore {
   refreshPhotos: (collageId: string) => Promise<void>;
   setupRealtimeSubscription: (collageId: string) => void;
   cleanupRealtimeSubscription: () => void;
+  addPhotoToState: (photo: Photo) => void;
+  removePhotoFromState: (photoId: string) => void;
+  startPolling: (collageId: string) => void;
+  stopPolling: () => void;
+  updateCollageSettings: (collageId: string, settings: Partial<SceneSettings>) => Promise<any>;
 }
 
 export const useCollageStore = create<CollageStore>((set, get) => ({
@@ -114,98 +46,147 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
   loading: false,
   error: null,
   realtimeChannel: null,
+  isRealtimeConnected: false,
+  lastRefreshTime: 0,
+  pollingInterval: null,
+
+  // Add photo to state
+  addPhotoToState: (photo: Photo) => {
+    set((state) => {
+      const exists = state.photos.some(p => p.id === photo.id);
+      if (exists) {
+        console.log('🔄 Photo already exists in state:', photo.id);
+        return state;
+      }
+      
+      console.log('✅ Adding photo to state:', photo.id);
+      // Add new photo at the beginning (most recent first)
+      return {
+        photos: [photo, ...state.photos],
+        lastRefreshTime: Date.now()
+      };
+    });
+  },
+
+  // Remove photo from state
+  removePhotoFromState: (photoId: string) => {
+    console.log('🗑️ Removing photo from state:', photoId);
+    set((state) => {
+      const beforeCount = state.photos.length;
+      const newPhotos = state.photos.filter(p => p.id !== photoId);
+      const afterCount = newPhotos.length;
+      
+      console.log(`🗑️ Photos: ${beforeCount} -> ${afterCount}`);
+      
+      if (beforeCount === afterCount) {
+        console.log('⚠️ Photo not found in state for removal:', photoId);
+      }
+      
+      return {
+        photos: newPhotos,
+        lastRefreshTime: Date.now()
+      };
+    });
+  },
 
   fetchCollages: async () => {
     set({ loading: true, error: null });
     try {
-      // Fetch collages
-      const { data: collages, error: collagesError } = await supabase
-        .from('collages')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Try to use the RPC function first
+      try {
+        const { data, error } = await supabase
+          .rpc('get_collages_with_photo_count');
+        
+        if (error) throw error;
+        
+        const collagesWithCounts = data.map((collage: any) => ({
+          ...collage,
+          createdAt: collage.created_at,
+          photoCount: collage.photo_count || 0
+        }));
+        
+        set({ collages: collagesWithCounts as Collage[], loading: false });
+        return;
+      } catch (rpcError: any) {
+        console.warn('RPC method failed, falling back to manual fetch:', rpcError.message);
+        
+        // Fallback to manual fetch if RPC fails
+        const { data: collages, error: collagesError } = await supabase
+          .from('collages')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (collagesError) throw collagesError;
-      
-      // Fetch photo counts for each collage
-      const collageIds = collages.map(c => c.id);
-      const { data: photoCounts, error: countsError } = await supabase
-        .from('photos')
-        .select('collage_id, count')
-        .in('collage_id', collageIds)
-        .count();
-      
-      if (countsError) throw countsError;
-      
-      // Create a map of collage_id to count
-      const countMap: Record<string, number> = {};
-      photoCounts.forEach((item: any) => {
-        countMap[item.collage_id] = item.count;
-      });
-      
-      // Map the collages with their counts
-      const collagesWithCounts = collages.map((collage: any) => ({
-        ...collage,
-        createdAt: collage.created_at,
-        photoCount: countMap[collage.id] || 0
-      }));
-      
-      set({ collages: collagesWithCounts as Collage[], loading: false });
+        if (collagesError) throw collagesError;
+        
+        // Fetch photo counts for each collage
+        const collageIds = collages.map((c: any) => c.id);
+        
+        // Get counts for each collage
+        const countPromises = collageIds.map(async (id: string) => {
+          const { count, error } = await supabase
+            .from('photos')
+            .select('*', { count: 'exact', head: true })
+            .eq('collage_id', id);
+            
+          return { id, count: count || 0, error };
+        });
+        
+        const counts = await Promise.all(countPromises);
+        
+        // Create a map of collage_id to count
+        const countMap: Record<string, number> = {};
+        counts.forEach(item => {
+          if (!item.error) {
+            countMap[item.id] = item.count;
+          }
+        });
+        
+        // Map the collages with their counts
+        const collagesWithCounts = collages.map((collage: any) => ({
+          ...collage,
+          createdAt: collage.created_at,
+          photoCount: countMap[collage.id] || 0
+        }));
+        
+        set({ collages: collagesWithCounts as Collage[], loading: false });
+      }
     } catch (error: any) {
       set({ error: error.message, loading: false });
     }
   },
 
-  createCollage: async (name: string) => {
-    try {
-      const code = nanoid(6);
-      // Convert to uppercase for better readability
-      const upperCode = code.toUpperCase();
-      
-      const { data, error } = await supabase
-        .from('collages')
-        .insert({ name, code: upperCode })
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      // Add to local state
-      set(state => ({
-        collages: [data, ...state.collages]
-      }));
-      
-      return data;
-    } catch (error: any) {
-      set({ error: error.message });
-      return null;
-    }
-  },
-
-  fetchCollageById: async (id: string) => {
+  fetchCollageByCode: async (code: string) => {
     set({ loading: true, error: null });
     try {
       const { data: collage, error: collageError } = await supabase
         .from('collages')
         .select('*')
-        .eq('id', id)
+        .eq('code', code)
         .single();
 
       if (collageError) throw collageError;
 
       const { data: settings } = await supabase
-          .from('collage_settings')
-          .select('settings')
-          .eq('collage_id', id)
-          .single();
+        .from('collage_settings')
+        .select('settings')
+        .eq('collage_id', collage.id)
+        .single();
 
       const collageWithSettings = {
         ...collage,
-        settings: settings?.settings || defaultSettings
-      };
+        settings: settings?.settings ? deepMerge(defaultSettings, settings.settings) : defaultSettings
+      } as Collage;
 
-      set({ currentCollage: collageWithSettings as Collage, loading: false });
+      set({ currentCollage: collageWithSettings, loading: false });
+      
+      // Fetch photos and setup subscription
+      await get().fetchPhotosByCollageId(collage.id);
+      get().setupRealtimeSubscription(collage.id);
+      
+      return collageWithSettings;
     } catch (error: any) {
       set({ error: error.message, loading: false });
+      return null;
     }
   },
 
@@ -213,30 +194,48 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
     try {
       console.log('🗑️ Starting collage deletion:', collageId);
       
-      // Delete the collage (cascade will handle photos and settings)
-      const { error } = await supabase
+      // Delete photos from storage
+      const { data: photos, error: photosError } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('collage_id', collageId);
+      
+      if (photosError) throw photosError;
+      
+      // Delete each photo file from storage
+      for (const photo of photos) {
+        const { error: storageError } = await supabase.storage
+          .from('photos')
+          .remove([photo.path]);
+          
+        if (storageError) {
+          console.error('Failed to delete photo file:', photo.path, storageError);
+        }
+      }
+      
+      // Delete collage from database
+      const { error: deleteError } = await supabase
         .from('collages')
         .delete()
         .eq('id', collageId);
         
-      if (error) throw error;
+      if (deleteError) throw deleteError;
       
-      // Update local state by removing the deleted collage
-      set((state) => ({
-        collages: state.collages.filter((c) => c.id !== collageId),
-        // If the current collage is the one being deleted, clear it
+      // Update local state
+      set(state => ({
+        collages: state.collages.filter(c => c.id !== collageId),
         currentCollage: state.currentCollage?.id === collageId ? null : state.currentCollage
       }));
       
       console.log('✅ Collage deleted successfully:', collageId);
-      
     } catch (error: any) {
-      console.error('❌ Delete collage error:', error.message);
+      console.error('Failed to delete collage:', error);
+      set({ error: error.message });
       throw error;
     }
   },
 
-  updateCollageName: async (collageId: string, name: string) => {
+  updateCollageName: async (collageId: string, name: string): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from('collages')
@@ -245,184 +244,170 @@ export const useCollageStore = create<CollageStore>((set, get) => ({
         
       if (error) throw error;
       
-      // Update both the collages list and currentCollage if it's the same one
-      set((state) => ({
-        collages: state.collages.map((c) => 
+      set(state => ({
+        collages: state.collages.map(c => 
           c.id === collageId ? { ...c, name } : c
         ),
         currentCollage: state.currentCollage?.id === collageId 
-          ? { ...state.currentCollage, name }
+          ? { ...state.currentCollage, name } 
           : state.currentCollage
       }));
       
+      return true;
+      
     } catch (error: any) {
       set({ error: error.message });
       throw error;
     }
   },
-
-  uploadPhoto: async (collageId: string, file: File) => {
+  
+  updateCollageSettings: async (collageId: string, settings: Partial<SceneSettings>) => {
     try {
-      console.log('📤 Starting photo upload:', file.name);
-      
-      // Validation
-      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-      if (file.size > MAX_FILE_SIZE) {
-        throw new Error('File size exceeds 10MB limit');
-      }
+      const currentCollage = get().currentCollage;
+      if (!currentCollage) throw new Error('No current collage');
 
-      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!validImageTypes.includes(file.type)) {
-        throw new Error('Invalid file type. Only images are supported.');
-      }
-      
-      // Upload file to storage
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${collageId}/${nanoid()}.${fileExt}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('photos')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-        
-      if (uploadError) throw uploadError;
+      const mergedSettings = deepMerge(currentCollage.settings, settings);
 
-      console.log('✅ File uploaded to storage:', uploadData.path);
-      
-      // Get public URL
-      const publicUrl = getFileUrl('photos', uploadData.path);
-      console.log('🔗 Public URL:', publicUrl);
-      
-      // Create photo record
-      const { data, error: dbError } = await supabase
-        .from('photos')
-        .insert({
-          collage_id: collageId,
-          url: publicUrl,
-          storage_path: uploadData.path
-        })
+      const { data, error } = await supabase
+        .from('collage_settings')
+        .update({ settings: mergedSettings })
+        .eq('collage_id', collageId)
         .select()
         .single();
-        
-      if (dbError) throw dbError;
-      
-      console.log('✅ Photo record created:', data.id);
-      console.log('🔔 Realtime should now broadcast new photo to all clients');
-      
-      return data;
-      
-    } catch (error: any) {
-      console.error('❌ Upload photo error:', error);
-      throw error;
-    }
-  },
 
-  deletePhoto: async (photoId: string) => {
-    try {
-      console.log('🗑️ Starting photo deletion:', photoId);
+      if (error) throw error;
 
-      // First, get the photo to find the storage path
-      const { data: photo, error: fetchError } = await supabase
-        .from('photos')
-        .select('url, storage_path')
-        .eq('id', photoId)
-        .single();
-
-      if (fetchError) {
-        console.error('❌ Error fetching photo for deletion:', fetchError);
-        throw fetchError;
-      }
-
-      // If we have a storage path, delete from storage
-      if (photo.storage_path) {
-        console.log('🗑️ Deleting from storage:', photo.storage_path);
-
-        const { error: storageError } = await supabase.storage
-          .from('photos')
-          .remove([photo.storage_path]);
-
-        if (storageError) {
-          console.warn('⚠️ Storage deletion warning:', storageError);
-          // Don't throw here - continue with database deletion
-        }
-      }
-
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('photos')
-        .delete()
-        .eq('id', photoId);
-
-      if (dbError) {
-        console.error('❌ Database deletion error:', dbError);
-        throw dbError;
-      }
-
-      console.log('✅ Photo deleted successfully:', photoId);
-      console.log('🔔 Realtime should now broadcast deletion to all clients');
-      
-      // Also remove from local state for immediate UI update
       set((state) => ({
-        photos: state.photos.filter((p) => p.id !== photoId)
+        currentCollage: state.currentCollage ? {
+          ...state.currentCollage,
+          settings: mergedSettings
+        } : null
       }));
-      
-    } catch (error: any) {
-      console.error('❌ Delete photo error:', error);
-      throw error;
-    }
-  },
-  
-  fetchPhotosByCollageId: async (collageId: string) => {
-    try {
-      console.log('📸 Fetching photos for collage:', collageId);
-      
-      const { data, error } = await supabase
-        .from('photos')
-        .select('*')
-        .eq('collage_id', collageId)
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      console.log('📸 Fetched photos:', data?.length || 0);
-      set({ photos: data as Photo[] });
-      
+      return data;
     } catch (error: any) {
-      console.error('❌ Fetch photos error:', error);
-      set({ error: error.message });
+      console.error('Failed to update collage settings:', error.message);
       throw error;
     }
   },
-  
-  refreshPhotos: async (collageId: string) => {
-    try {
-      console.log('🔄 Refreshing photos for collage:', collageId);
-      
-      const { data, error } = await supabase
-        .from('photos')
-        .select('*')
-        .eq('collage_id', collageId)
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      console.log('📸 Refreshed photos count:', data?.length || 0);
-      set({ photos: data as Photo[], error: null });
-      
-    } catch (error: any) {
-      console.error('❌ Refresh photos error:', error);
-      set({ error: error.message });
-      throw error;
-    }
-  },
-  
   setupRealtimeSubscription: (collageId: string) => {
-    // Implement this
+    // Clean up existing
+    get().cleanupRealtimeSubscription();
+
+    console.log('🚀 Setting up realtime for collage:', collageId);
+
+    const channel = supabase
+      .channel(`photos_${collageId}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'photos',
+          filter: `collage_id=eq.${collageId}`
+        },
+        (payload) => {
+          console.log('🔔 Realtime event:', payload.eventType, payload);
+          
+          if (payload.eventType === 'INSERT' && payload.new) {
+            console.log('➕ REALTIME INSERT:', payload.new.id);
+            get().addPhotoToState(payload.new as Photo);
+          } 
+          else if (payload.eventType === 'DELETE' && payload.old) {
+            console.log('🗑️ REALTIME DELETE:', payload.old.id);
+            get().removePhotoFromState(payload.old.id);
+          }
+          else if (payload.eventType === 'UPDATE' && payload.new) {
+            console.log('📝 REALTIME UPDATE:', payload.new.id);
+            // Handle photo updates if needed
+            set((state) => ({
+              photos: state.photos.map(p => 
+                p.id === payload.new.id ? { ...p, ...payload.new } : p
+              ),
+              lastRefreshTime: Date.now()
+            }));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Realtime connected successfully');
+          set({ isRealtimeConnected: true });
+          // Stop polling since realtime is working
+          get().stopPolling();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.log('❌ Realtime failed, falling back to polling');
+          set({ isRealtimeConnected: false });
+          get().startPolling(collageId);
+        } else if (status === 'CLOSED') {
+          console.log('🔌 Realtime connection closed');
+          set({ isRealtimeConnected: false });
+        }
+      });
+
+    set({ realtimeChannel: channel });
+
+    // Fallback to polling after 5 seconds if realtime doesn't connect
+    setTimeout(() => {
+      if (!get().isRealtimeConnected) {
+        console.log('⏰ Realtime timeout, starting polling fallback');
+        get().startPolling(collageId);
+      }
+    }, 5000);
   },
   
   cleanupRealtimeSubscription: () => {
-    // Implement this
+    const channel = get().realtimeChannel;
+    if (channel) {
+      console.log('🧹 Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+      set({ realtimeChannel: null, isRealtimeConnected: false });
+    }
+    get().stopPolling();
+  },
+  
+  startPolling: (collageId: string) => {
+    get().stopPolling();
+    
+    console.log('🔄 Starting polling for collage:', collageId);
+    
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('photos')
+          .select('*')
+          .eq('collage_id', collageId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        const currentPhotoIds = get().photos.map(p => p.id).sort().join(',');
+        const newPhotoIds = (data || []).map(p => p.id).sort().join(',');
+        
+        if (currentPhotoIds !== newPhotoIds) {
+          console.log('📡 Polling detected changes, updating state');
+          set({ 
+            photos: data as Photo[], 
+            lastRefreshTime: Date.now() 
+          });
+        }
+      } catch (error) {
+        console.error('❌ Polling error:', error);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    set({ pollingInterval: interval });
+  },
+
+  stopPolling: () => {
+    const interval = get().pollingInterval;
+    if (interval) {
+      console.log('🛑 Stopping polling');
+      clearInterval(interval);
+      set({ pollingInterval: null });
+    }
   }
 }));
